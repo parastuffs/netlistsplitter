@@ -142,7 +142,6 @@ foreach my $line (@lines){
     }
 }
 close $handle;
-exit;
 
 my @InstancesToMove;
 my @InstancesToMove_clean;
@@ -154,7 +153,7 @@ foreach my $cellToMove (@InstancesToMoveIn) {
     my $tmp = quotemeta $cellToMove;
     push @InstancesToMove_clean, $tmp;
 }
-    
+
 #***************************************************************************
 # Process NETLIST  
 # Netlist should be flat and in a single file 
@@ -218,7 +217,8 @@ foreach my $inst (@InstancesToMove)
     my $foundInst=$TopModule->find_cell($inst);
     if (! defined $foundInst) {$log->msg(2, "ERROR: can't find instance $inst <-");}
     else {
-            $log->msg(2, "$indent Found instance: $foundInst->name <-");
+            my $foundInstName = $foundInst->name;
+            $log->msg(2, "$indent Found instance: $foundInstName <-");
             # Add this cell to TopDie netlist
             AddCell($TopDie_TopMod, $foundInst, @fl);
             DeleteCell($BotDie_TopMod, $foundInst, @fl);
@@ -228,12 +228,14 @@ foreach my $inst (@InstancesToMove)
                 {
                     # Get pin direction
                     # my $thisPinDirection=$pin->direction;
-                    $log->msg(2, "$indent $indent Pin: $pin->name <-");
+                    my $pinName = $pin->name;
+                    $log->msg(2, "$indent $indent Pin: $pinName <-");
                     
                     # Get net(s) connected to this pin
                     foreach my $pinselect ($pin->pinselects)
                     {
-                        $log->msg(2, "$indent $indent $indent Net: $pinselect->netname <-");
+                        my $pinselectNetname = $pinselect->netname;
+                        $log->msg(2, "$indent $indent $indent Net: $pinselectNetname <-");
 
                         #my $tmp=$pinselect->netname;
                         #$tmp=~ s/\{//g;
@@ -253,11 +255,13 @@ foreach my $inst (@InstancesToMove)
                         my $foundPort=$TopModule->find_port($netNameOnly);
                         if (defined $foundPort) 
                         {
-                            $log->msg(2, "$indent $indent $indent $indent Is top-level port: foundPort->name <-");
+                            my $foundPortName = $foundPort->name;
+                            $log->msg(2, "$indent $indent $indent $indent Is top-level port: $foundPortName <-");
                             # If found, check if it has been already added
-                            my $portInTop=$TopDie_TopMod->find_port($foundPort->name); 
+                            my $portInTop=$TopDie_TopMod->find_port($foundPortName); 
                             if (defined $portInTop) 
-                                {$log->msg(2, "$indent $indent $indent $indent $indent Port: $foundPort->name <- already added, skipping");}
+                                {
+                                    $log->msg(2, "$indent $indent $indent $indent $indent Port: $foundPortName <- already added, skipping");}
                                 else
                                 {
                                 # if not add port the Top die with same direction as in src netlist
@@ -268,7 +272,8 @@ foreach my $inst (@InstancesToMove)
                                                     array=>$foundPort->array,
                                                     module=>$TopDie_TopMod->name
                                                     );
-                                $log->msg(2, "$indent $indent $indent $indent $indent Port: $foundPort->name with dir: $foundPort->direction added to TopDie");
+                                my $foundPortDirection = $foundPort->direction;
+                                $log->msg(2, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $foundPortDirection added to TopDie");
                                 
                                 # ... and to the Bottom die, we need to add 2 pins
                                 # one with same direction and same name
@@ -354,7 +359,8 @@ foreach my $inst (@InstancesToMove)
                                     {
                                         my $foundInstName = $foundInst->name;
                                         my $foundInstSubmodname = $foundInst->submodname;
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent $indent Inst. name:  $foundInstName Module name: $foundInstSubmodname Pin: $pin->name ");
+                                        my $pinName = $pin->name;
+                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent $indent Inst. name:  $foundInstName Module name: $foundInstSubmodname Pin: $pinName ");
                                         my $macroTofind = $foundInst->submodname;
                                         my $pinTofind   = $pin->name;
                                         my $pindir = $LEF->find_pindir($macroTofind,$pinTofind);
