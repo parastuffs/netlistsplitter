@@ -2,10 +2,9 @@
 use 5.010;
 use strict;
 use warnings;
-use diagnostics;
+# use diagnostics;
 use Test::More;
 use Verilog::Netlist;
-use lib './lefParser';
 use lib './lefParser';
 use LEF;
 use strict;use Data::Dumper;
@@ -28,7 +27,6 @@ my $log = File::Log->new({
                                           #  however it might be better to just use the say()
                                           #  method
 });
-$log->msg(2, "Add this to the log file if debug >= 2");
 
 $log->msg(2, "*******************************************");
 $log->msg(2, "Splitting netlist");
@@ -134,8 +132,17 @@ $LEF->parse_LEF();
 # Get the list of instances to move on another die 
 
 open my $handle, '<', $path_to_file;
-chomp(my @InstancesToMoveIn = <$handle>);
+my @InstancesToMoveIn;
+my @lines = <$handle>;
+foreach my $line (@lines){
+    chomp $line;
+    my @linesplit = split(' ', $line);
+    if ($linesplit[1] == '1') {
+        push(@InstancesToMoveIn, $linesplit[0]);
+    }
+}
 close $handle;
+exit;
 
 my @InstancesToMove;
 my @InstancesToMove_clean;
