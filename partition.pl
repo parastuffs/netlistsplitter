@@ -4,6 +4,7 @@ use strict;
 use warnings;
 # use diagnostics;
 use Test::More;
+# use lib '.';
 use Verilog::Netlist;
 use lib './lefParser';
 use LEF;
@@ -11,7 +12,7 @@ use strict;use Data::Dumper;
 use File::Log;
 
 my $log = File::Log->new({
-  debug           => 4,                   # Set the debug level
+  debug           => 3,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -28,6 +29,8 @@ my $log = File::Log->new({
                                           #  method
 });
 
+# print STDOUT "test";
+
 $log->msg(2, "*******************************************");
 $log->msg(2, "Splitting netlist");
 $log->msg(2, "*******************************************");
@@ -41,6 +44,7 @@ $opt->parameter( "+incdir+verilog", "-y","verilog",);
 my $nl =  new Verilog::Netlist (options => $opt, link_read_nonfatal=>1,);
 my $nl_Top = new Verilog::Netlist (options => $opt, link_read_nonfatal=>1,);
 my $nl_Bot = new Verilog::Netlist (options => $opt, link_read_nonfatal=>1,);
+my $nl_toplevel = new Verilog::Netlist (options => $opt, link_read_nonfatal=>1,);
 
 my @fl = (filename=>'partition.pl', lineno=>0);
 
@@ -95,10 +99,10 @@ my %hashNetCell;
 #------------------------------------------------------------------------
 # SPC Core 
 #------------------------------------------------------------------------
-my $root=("prt_spc");
-my @VerilogFiles=("./$root/spc_flat_m.v");
-my $path_to_file = ("./$root/spc.prt");
-my $TopModuleName=("spc");
+# my $root=("prt_spc");
+# my @VerilogFiles=("./$root/spc_flat_m.v");
+# my $path_to_file = ("./$root/spc.prt");
+# my $TopModuleName=("spc");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -111,10 +115,10 @@ my $TopModuleName=("spc");
 #my $path_to_file = ("./$root/spc.prt");
 #my $TopModuleName=("spc");
 
-# my $root=("prt_exu");
-# my @VerilogFiles=("./$root/exu_flat_m.v");
-# my $path_to_file = ("./$root/exu.prt");
-# my $TopModuleName=("exu");
+my $root=("prt_exu");
+my @VerilogFiles=("./$root/exu_flat_m.v");
+my $path_to_file = ("./$root/exu.prt");
+my $TopModuleName=("exu");
 #------------------------------------------------------------------------
 
 #***************************************************************************
@@ -186,19 +190,70 @@ LinkNetCells();
 # Create top module in top die 
 my $TopDie_TopMod = CreateNewModule($nl_Top,'TopDie',@fl);
 
+# Create top module in toplevel
+my $TopLevel_TopMod = CreateNewModule($nl_toplevel, 'TopLevel', @fl);
+$nl_Bot->link();
+
 # Rename the top module in bot die 
 my $BotDie_TopMod=$nl_Bot->find_module($TopModuleName);
 if (! defined $TopModule) {$log->msg(2, "Could't find top module in bot die: $TopModuleName"); exit;}
     else
         {
         $log->msg(2, "Renaming top module of the bottom die: $TopModuleName");
-        #$BotDie_TopMod->name='BotDie';
+        # $BotDie_TopMod->name='BotDie';
     }    
 
-#foreach my $port ($TopModule->ports) {
-##    $log->msg(2, "Port: ", $port->name, " ");
-#    $port->dump;
-#}
+# foreach my $port ($TopModule->ports) {
+#     my $portName = $port->name;
+#    $log->msg(3, "Port: $portName");
+#    # $port->dump;
+# }
+
+
+my $topdiecell = $TopLevel_TopMod->new_cell(name=>"top_die",
+                        netlist=>$nl_toplevel,
+                        submod=>$TopDie_TopMod,
+                        submodname=>$TopDie_TopMod->name);
+
+my $botdiecell = $TopLevel_TopMod->new_cell(name=>"bot_die",
+                        netlist=>$nl_toplevel,
+                        submod=>$BotDie_TopMod,
+                        submodname=>$BotDie_TopMod->name);
+
+# Copy ports from bottom die into toplevel.
+foreach my $port ($TopModule->ports) {
+    my $netname = $port->net->name;
+    $log->msg(2, "netname in bottom port: $netname");
+    $TopLevel_TopMod->new_port(data_type=>$port->data_type,
+                            direction=>$port->direction,
+                            module=>$TopLevel_TopMod,
+                            name=>$port->name,
+                            net=>$port->net,
+                            array=>$port->array);
+    # At the same time, copy linked net.
+    my $botnet = $port->net;
+    # my $tmpvar = $port->direction;
+    # $log->msg(2, "bite: $tmpvar");
+    $TopLevel_TopMod->new_net(array=>$botnet->array,
+                        data_type=>$botnet->data_type,
+                        module=>$TopLevel_TopMod,
+                        lsb=>$botnet->lsb,
+                        msb=>$botnet->msb,
+                        name=>$botnet->name,
+                        net_type=>$botnet->net_type,
+                        value=>$botnet->value,
+                        width=>$botnet->width,
+                        port=>$port
+                        );
+}
+
+# Resolves references between the different modules.
+$nl_toplevel->link();
+$nl_Top->link();
+$nl_Bot->link();
+
+
+
 
 #*****************************************************************************************************************
 # ----->
@@ -215,10 +270,10 @@ foreach my $inst (@InstancesToMove)
 {
     $log->msg(2, "Searching instance: $inst");
     my $foundInst=$TopModule->find_cell($inst);
-    if (! defined $foundInst) {$log->msg(2, "ERROR: can't find instance $inst <-");}
+    if (! defined $foundInst) {$log->msg(5, "ERROR: can't find instance $inst <-");}
     else {
             my $foundInstName = $foundInst->name;
-            $log->msg(2, "$indent Found instance: $foundInstName <-");
+            $log->msg(5, "$indent Found instance: $foundInstName <-");
             # Add this cell to TopDie netlist
             AddCell($TopDie_TopMod, $foundInst, @fl);
             DeleteCell($BotDie_TopMod, $foundInst, @fl);
@@ -229,20 +284,20 @@ foreach my $inst (@InstancesToMove)
                     # Get pin direction
                     # my $thisPinDirection=$pin->direction;
                     my $pinName = $pin->name;
-                    $log->msg(2, "$indent $indent Pin: $pinName <-");
+                    $log->msg(5, "$indent $indent Pin: $pinName <-");
                     
                     # Get net(s) connected to this pin
                     foreach my $pinselect ($pin->pinselects)
                     {
                         my $pinselectNetname = $pinselect->netname;
-                        $log->msg(2, "$indent $indent $indent Net: $pinselectNetname <-");
+                        $log->msg(5, "$indent $indent $indent Net: $pinselectNetname <-");
 
                         #my $tmp=$pinselect->netname;
                         #$tmp=~ s/\{//g;
                         #$tmp=~ s/\}//g;
                         #$tmp=~ s/\[([^\[\]]|(?0))*]//g;
                         #my @answer = split(',', $tmp);
-                        #foreach (@answer) {$log->msg(2, "$_");}
+                        #foreach (@answer) {$log->msg(5, "$_");}
 
                         my $netNameOnly = $pinselect->netname;
                         # Get rid of brackets if bus (array)
@@ -256,12 +311,12 @@ foreach my $inst (@InstancesToMove)
                         if (defined $foundPort) 
                         {
                             my $foundPortName = $foundPort->name;
-                            $log->msg(2, "$indent $indent $indent $indent Is top-level port: $foundPortName <-");
+                            $log->msg(5, "$indent $indent $indent $indent Is top-level port: $foundPortName <-");
                             # If found, check if it has been already added
                             my $portInTop=$TopDie_TopMod->find_port($foundPortName); 
                             if (defined $portInTop) 
                                 {
-                                    $log->msg(2, "$indent $indent $indent $indent $indent Port: $foundPortName <- already added, skipping");}
+                                    $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName <- already added, skipping");}
                                 else
                                 {
                                 # if not add port the Top die with same direction as in src netlist
@@ -270,22 +325,23 @@ foreach my $inst (@InstancesToMove)
                                                     direction=>$foundPort->direction,
                                                     data_type=>$foundPort->data_type,
                                                     array=>$foundPort->array,
-                                                    module=>$TopDie_TopMod->name
+                                                    module=>$TopDie_TopMod->name,
+                                                    net=>$foundPort->net
                                                     );
                                 my $foundPortDirection = $foundPort->direction;
-                                $log->msg(2, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $foundPortDirection added to TopDie");
+                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $foundPortDirection added to TopDie");
                                 
                                 # ... and to the Bottom die, we need to add 2 pins
                                 # one with same direction and same name
                                 # one with opposite direction so that we feedthrough
                                 
                                 # This is first pin 
-                                # Since copy this one exists already 
+                                # Since copy this one exists already
 
                                 # This is the second pin with oposite direction
                                 my $otherDieDirection="none";
-                                if ($foundPort->direction eq "in") { $otherDieDirection="output"; }
-                                if ($foundPort->direction eq "out") { $otherDieDirection="input"; }
+                                if ($foundPort->direction eq "in") { $otherDieDirection="out"; }
+                                if ($foundPort->direction eq "out") { $otherDieDirection="in"; }
                                
                                 # This is a feedcthough so it has a different name
                                 my $otherDiePortName=$foundPort->name;
@@ -297,9 +353,10 @@ foreach my $inst (@InstancesToMove)
                                                     direction=>$otherDieDirection,
                                                     data_type=>$foundPort->data_type,
                                                     array=>$foundPort->array,
-                                                    module=>$TopDie_TopMod->name
+                                                    module=>$TopDie_TopMod->name,
+                                                    net=>$foundPort->net
                                                     );
-                                $log->msg(2, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die");
+                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die");
                                 }
                         }
                                                 
@@ -312,29 +369,29 @@ foreach my $inst (@InstancesToMove)
                        
                         if (defined $foundNet) {
                             my $foundNetName = $foundNet->name;
-                            $log->msg(2, "$indent $indent $indent $indent Net is top-level wire: $foundNetName <-"); 
+                            $log->msg(5, "$indent $indent $indent $indent Net is top-level wire: $foundNetName <-"); 
                             if ( defined $foundNet->msb ) {
                                 $isBus=1;
                                 my $foundNetMSB = $foundNet->msb;
                                 my $foundNetLSB = $foundNet->lsb;
-                                $log->msg(2, "$indent $indent $indent $indent $indent MSB: $foundNetMSB LSB: $foundNetLSB <-");
+                                $log->msg(5, "$indent $indent $indent $indent $indent MSB: $foundNetMSB LSB: $foundNetLSB <-");
                                 }
                                 else {
                                     $isBus=0;
                                 }
                             if ($isBus == 0) {
-                                #$log->msg(2, Dumper($foundNet));
+                                #$log->msg(5, Dumper($foundNet));
                                 $netIs3D = isNet3D($foundNet->name, \@InstancesToMove_clean);
                            
                                 if ($netIs3D == 0)  
                                 # This is a local 2D wire    
                                 {
-                                    $log->msg(2, "$indent $indent $indent $indent $indent $indent Net: $foundNetName is 2D ");
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent Net: $foundNetName is 2D ");
                                     
                                     # Check if it has been already added
                                     my $netInTop=$TopDie_TopMod->find_port($netNameOnly); 
                                     if (defined $netInTop) 
-                                        {$log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Wire already added, skipping: $netNameOnly ");}
+                                        {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Wire already added, skipping: $netNameOnly ");}
                                     else
                                     {
                                             my $newNet=$TopDie_TopMod->new_net(name=>$netNameOnly,
@@ -342,32 +399,32 @@ foreach my $inst (@InstancesToMove)
                                                         data_type=>$foundNet->data_type,
                                                         module=>$TopDie_TopMod->name
                                                         );
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Wire (2D): $netNameOnly added to Top die");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Wire (2D): $netNameOnly added to Top die");
                                     }
                                 }
                                 else 
                                 # This is a 3D net
                                 {
-                                    $log->msg(2, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D ");
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D ");
                                        
                                     # Check if this net has been already added
                                     my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
                                     if (defined $portInTop2) 
-                                        {$log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");}
+                                        {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");}
                                     else
                                     # if not look for the LEF file to discover the direction
                                     {
                                         my $foundInstName = $foundInst->name;
                                         my $foundInstSubmodname = $foundInst->submodname;
                                         my $pinName = $pin->name;
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent $indent Inst. name:  $foundInstName Module name: $foundInstSubmodname Pin: $pinName ");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Inst. name:  $foundInstName Module name: $foundInstSubmodname Pin: $pinName ");
                                         my $macroTofind = $foundInst->submodname;
                                         my $pinTofind   = $pin->name;
                                         my $pindir = $LEF->find_pindir($macroTofind,$pinTofind);
                                         # only lower case  
                                         my $pindir_lc= lc $pindir;
                                         
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent $indent Macro: $macroTofind with Pin: $pinTofind Pindir: $pindir_lc  ");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Macro: $macroTofind with Pin: $pinTofind Pindir: $pindir_lc  ");
                                        
                                        #----------------------------------------------------------------
                                        # Add ports                                                      |
@@ -376,9 +433,10 @@ foreach my $inst (@InstancesToMove)
                                                             direction=>$pindir_lc,
                                                             data_type=>$foundNet->data_type,
                                                             #array=>$foundPort->array,
-                                                            module=>$TopDie_TopMod->name
+                                                            module=>$TopDie_TopMod->name,
+                                                            net=>$foundNet
                                                     );
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent 3D wire port: $netNameOnly added to Top die");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D wire port: $netNameOnly added to Top die");
                                 
                                         # ... and to the Bottom die, with opposite direction
                                         my $otherDieDirection="none";
@@ -389,9 +447,15 @@ foreach my $inst (@InstancesToMove)
                                                             direction=>$otherDieDirection,
                                                             data_type=>$foundNet->data_type,
                                                             #array=>$foundPort->array,
-                                                            module=>$TopDie_TopMod->name
+                                                            module=>$TopDie_TopMod->name,
+                                                            net=>$foundNet
                                                             );
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Port: $netNameOnly added to Bot die");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port: $netNameOnly added to Bot die");
+                                        $TopLevel_TopMod->new_net(name=>$netNameOnly,
+                                                                data_type=>"",#wire
+                                                                module=>$TopLevel_TopMod->name,
+                                                                comment=>"// 3D net"
+                                                                );
                                         
                                     }
                                 }
@@ -419,12 +483,12 @@ foreach my $inst (@InstancesToMove)
                                 if ($busIs3D == 0)  
                                 # This is a local 2D bus    
                                 {
-                                    $log->msg(2, "$indent $indent $indent $indent $indent $indent Bus: $netNameOnly is 2D ");
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent Bus: $netNameOnly is 2D bus");
                                     
                                     # Check if it has been already added
                                     my $netInTop=$TopDie_TopMod->find_port($netNameOnly); 
                                     if (defined $netInTop) 
-                                        {$log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Bus already added, skipping: $netNameOnly ");}
+                                        {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Bus already added, skipping: $netNameOnly ");}
                                     else
                                     {
                                             my $newNet=$TopDie_TopMod->new_net(name=>$netNameOnly,
@@ -432,18 +496,18 @@ foreach my $inst (@InstancesToMove)
                                                         data_type=>$foundNet->data_type,
                                                         module=>$TopDie_TopMod->name
                                                         );
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent 2D local bus: $netNameOnly added to Top die");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 2D local bus: $netNameOnly added to Top die");
                                     }
                                 }
                                 else 
                                 # This is a 3D bus
                                 {
-                                    $log->msg(2, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D ");
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D bus");
                                        
                                     # Check if this net has been already added
                                     my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
                                     if (defined $portInTop2) 
-                                        {$log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");}
+                                        {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");}
                                     else
                                     # if not look for the LEF file to discover the direction
                                     {
@@ -452,31 +516,40 @@ foreach my $inst (@InstancesToMove)
                                         my $pindir = $LEF->find_pindir($macroTofind,$pinTofind);
                                         my $pindir_lc = lc $pindir;
 
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent $indent Macro: $macroTofind with  Pin: $pinTofind Pindir: $pindir_lc  ");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Macro: $macroTofind with  Pin: $pinTofind Pindir: $pindir_lc  ");
                                         
                                         # Top die 
                                         my $newPort=$TopDie_TopMod->new_port(name=>$netNameOnly,
                                                     # direction is the same as top
                                                     direction=>$pindir_lc,
                                                     data_type=>$foundNet->data_type,
-                                                    module=>$TopDie_TopMod->name
+                                                    module=>$TopDie_TopMod->name,
+                                                    net=>$foundNet
                                                     );
                                     
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly added to Top die");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly added to Top die");
 
                                         # This is the second pin with oposite direction
                                         my $otherDieDirection="none";
                                         if ($pindir_lc eq "input")  { $otherDieDirection="output"; }
                                         if ($pindir_lc eq "output") { $otherDieDirection="input"; }
                                     
-                                        # This is a feedcthough so it has a different name
+                                        # This is a feedthrough so it has a different name
                                         my $newPort_Bot=$BotDie_TopMod->new_port(
                                                             name=>$netNameOnly,
                                                             direction=>$otherDieDirection,
                                                             data_type=>$foundNet->data_type,
-                                                            module=>$TopDie_TopMod->name
+                                                            module=>$TopDie_TopMod->name,
+                                                            net=>$foundNet
                                                             );
-                                        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly with dir: $otherDieDirection added to Bot die");
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly with dir: $otherDieDirection added to Bot die");
+
+                                        $TopLevel_TopMod->new_net(
+                                                            name=>$netNameOnly,
+                                                            data_type=>$foundNet->data_type,
+                                                            module=>$TopLevel_TopMod->name,
+                                                            comment=>"// 3D bus"
+                                                            );
                                     }
                                 }
                             }
@@ -489,12 +562,51 @@ foreach my $inst (@InstancesToMove)
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 $log->msg(2, "<=== Done ! ");
+
+$log->msg(2, "Creating pins in top and bottom instanciations in toplevel.");
+
+foreach my $port ($BotDie_TopMod->ports){
+    my $portName = $port->name;
+    my $portNet = $port->net;
+    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
+    my @pinselectArr = ($pinselect);
+    $botdiecell->new_pin(
+                    cell=>$botdiecell,
+                    module=>$BotDie_TopMod,
+                    name=>$port->name,
+                    nets=>$port->net,
+                    portname=>$port->name,
+                    port=>$port,
+                    netlist=>$nl_toplevel,
+                    _pinselects=>\@pinselectArr
+                    );
+    $nl_toplevel->link();
+}
+
+foreach my $port ($TopDie_TopMod->ports){
+    my $portName = $port->name;
+    my $portNet = $port->net;
+    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
+    my @pinselectArr = ($pinselect);
+    $topdiecell->new_pin(
+                    cell=>$topdiecell,
+                    module=>$TopDie_TopMod,
+                    name=>$port->name,
+                    nets=>$port->net,
+                    portname=>$port->name,
+                    port=>$port,
+                    netlist=>$nl_toplevel,
+                    _pinselects=>\@pinselectArr
+                    );
+    $nl_toplevel->link();
+}
 #
 # Write netlists
 $log->msg(2, "===> ");
 $log->msg(2, "Write netlists: ");
 write_nl($nl_Top,"./$root/Top.v");
 write_nl($nl_Bot,"./$root/Bot.v");
+write_nl($nl_toplevel,"./$root/toplevel.v");
 $log->msg(2, "<=== Done ! ");
 
 ## Dump netlists 
@@ -515,7 +627,7 @@ sub CreateNewModule {
     my $mod = shift;
     my $f = shift;
     
-    $nl->new_module (   name=>$mod, 
+    $nl->new_module (   name=>$mod,
                         @fl);
 }
 
@@ -552,6 +664,8 @@ my $module = shift;
 my $cell   = shift;
 my $fl     = shift;
 
+my $submodname = $cell->submodname;
+
 my $cellAdded=$module->new_cell(
                             name=>$cell->name, 
                             submodname=>$cell->submodname, 
@@ -562,8 +676,8 @@ if (! defined $cellAdded) {$log->msg(2, "Could not add cell: $cellName ");}
 else
     {
     my $cellAddedName = $cellAdded->name;
-    $log->msg(2, "");
     $log->msg(2, "Cell added: $cellAddedName ");
+    $log->msg(3, "Submodname: $submodname");
     }
 }
 
@@ -576,7 +690,7 @@ sub isNet3D {
     my $Is3DNet=0;
     my $cellName=""; 
     
-    $log->msg(2, "$indent $indent $indent $indent $indent $indent Net: $netToFind is connected to cells:");
+    $log->msg(4, "$indent $indent $indent $indent $indent $indent Net: $netToFind is connected to cells:");
     
     foreach my $cellName (@{$hashNetCell{$netToFind}}) {
         $cellName=~ s/\s//g;                 
@@ -585,7 +699,7 @@ sub isNet3D {
         # Put in the array
         push @ConnectedCells, $tmp;
         #debug
-        $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent cell: $tmp ___");
+        $log->msg(4, "$indent $indent $indent $indent $indent $indent $indent cell: $tmp ___");
     }
 
     
@@ -599,7 +713,7 @@ sub isNet3D {
                 $count=$count+1; 
                 }
                 else {
-                    $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Diff.: cell on net: $cell, & cell to move: $cellToMove");
+                    $log->msg(4, "$indent $indent $indent $indent $indent $indent $indent Diff. cell on net: $cell, & cell to move: $cellToMove");
                     # single cell on another die will cause 
                     # this net to become 3D net
                     # saves computational time
@@ -610,14 +724,14 @@ sub isNet3D {
         
     # Finally figure out if it is a 2D net
     my $arraySize = @ConnectedCells;
-    $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Count: $count Array size: $arraySize ");
+    # $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Count: $count Array size: $arraySize ");
     if ($count == $arraySize) { # all cells are on the top die
         $Is3DNet=0;
-        $log->msg(2, "$indent $indent $indent $indent $indent $indent Is 2D net");
+        $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 2D net");
         } # if not it is a 3D net
         else {
             $Is3DNet=1;
-            $log->msg(2, "$indent $indent $indent $indent $indent $indent Is 3D net");
+            $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 3D net");
         }
     return ($Is3DNet);
 }
