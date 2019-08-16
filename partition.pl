@@ -568,7 +568,8 @@ $log->msg(2, "Creating pins in top and bottom instanciations in toplevel.");
 foreach my $port ($BotDie_TopMod->ports){
     my $portName = $port->name;
     my $portNet = $port->net;
-    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
+    # Do not set msb/lsb when creating the PinSelection, otherwise if the net is a bus, the width will appear in the pin connection.
+    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
     my @pinselectArr = ($pinselect);
     $botdiecell->new_pin(
                     cell=>$botdiecell,
@@ -586,7 +587,7 @@ foreach my $port ($BotDie_TopMod->ports){
 foreach my $port ($TopDie_TopMod->ports){
     my $portName = $port->name;
     my $portNet = $port->net;
-    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
+    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
     my @pinselectArr = ($pinselect);
     $topdiecell->new_pin(
                     cell=>$topdiecell,
