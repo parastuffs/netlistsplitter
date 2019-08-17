@@ -12,7 +12,7 @@ use strict;use Data::Dumper;
 use File::Log;
 
 my $log = File::Log->new({
-  debug           => 3,                   # Set the debug level
+  debug           => 5,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -223,7 +223,7 @@ my $botdiecell = $TopLevel_TopMod->new_cell(name=>"bot_die",
 # Copy ports from bottom die into toplevel.
 foreach my $port ($TopModule->ports) {
     my $netname = $port->net->name;
-    $log->msg(2, "netname in bottom port: $netname");
+    $log->msg(5, "netname in bottom port: $netname");
     $TopLevel_TopMod->new_port(data_type=>$port->data_type,
                             direction=>$port->direction,
                             module=>$TopLevel_TopMod,
@@ -232,8 +232,6 @@ foreach my $port ($TopModule->ports) {
                             array=>$port->array);
     # At the same time, copy linked net.
     my $botnet = $port->net;
-    # my $tmpvar = $port->direction;
-    # $log->msg(2, "bite: $tmpvar");
     $TopLevel_TopMod->new_net(array=>$botnet->array,
                         data_type=>$botnet->data_type,
                         module=>$TopLevel_TopMod,
@@ -264,6 +262,9 @@ $log->msg(2, "===>");
 $log->msg(2, "Splitting: ");
 $log->msg(2, "...");
 my $indent="   ";
+
+# List of input feedthroughs to top die.
+my @ft_in = ();
 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 foreach my $inst (@InstancesToMove) 
@@ -312,6 +313,7 @@ foreach my $inst (@InstancesToMove)
                         {
                             my $foundPortName = $foundPort->name;
                             $log->msg(5, "$indent $indent $indent $indent Is top-level port: $foundPortName <-");
+                            my $ft_net;
                             # If found, check if it has been already added
                             my $portInTop=$TopDie_TopMod->find_port($foundPortName); 
                             if (defined $portInTop) 
@@ -320,16 +322,73 @@ foreach my $inst (@InstancesToMove)
                                 else
                                 {
                                 # if not add port the Top die with same direction as in src netlist
-                                my $newPort=$TopDie_TopMod->new_port(name=>$foundPort->name,
-                                                    # direction is the same as top
-                                                    direction=>$foundPort->direction,
-                                                    data_type=>$foundPort->data_type,
-                                                    array=>$foundPort->array,
-                                                    module=>$TopDie_TopMod->name,
-                                                    net=>$foundPort->net
-                                                    );
+                                my $direction = $foundPort->direction;
                                 my $foundPortDirection = $foundPort->direction;
-                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $foundPortDirection added to TopDie");
+                                if ($direction eq "in") {
+                                    my $newPort=$TopDie_TopMod->new_port(name=>$foundPort->name,
+                                                        # direction is the same as top
+                                                        direction=>$foundPort->direction,
+                                                        data_type=>$foundPort->data_type,
+                                                        array=>$foundPort->array,
+                                                        module=>$TopDie_TopMod->name,
+                                                        net=>$foundPort->net
+                                                        );
+                                    $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $foundPortDirection added to TopDie");
+                                    push(@ft_in, $foundPort->name);
+                                }
+                                elsif ($direction eq "out") {
+                                    # Create a feedthrough net
+                                    my $newportname = $foundPort->name."_ft_toplevel";
+                                    $ft_net = new Verilog::Netlist::Net(array=>$foundPort->net->array,
+                                                                    data_type=>$foundPort->net->data_type,
+                                                                    module=>$TopLevel_TopMod,
+                                                                    lsb=>$foundPort->net->lsb,
+                                                                    msb=>$foundPort->net->msb,
+                                                                    name=>$newportname,
+                                                                    net_type=>$foundPort->net->net_type,
+                                                                    value=>$foundPort->net->value,
+                                                                    width=>$foundPort->net->width
+                                                                    );
+                                    my $newPort=$TopDie_TopMod->new_port(name=>$newportname,
+                                                        # direction is the same as top
+                                                        direction=>$foundPort->direction,
+                                                        data_type=>$foundPort->data_type,
+                                                        array=>$foundPort->array,
+                                                        module=>$TopDie_TopMod->name,
+                                                        net=>$ft_net
+                                                        );
+                                    my $foundPortDirection = $foundPort->direction;
+                                    $log->msg(5, "$indent $indent $indent $indent $indent Port: $newportname with dir: $foundPortDirection added to TopDie");
+                                    push(@ft_in, $foundPort->name);
+
+                                    # Now change the pin name in all the cells using it.
+                                    foreach my $cell ($TopDie_TopMod->cells) {
+                                        foreach my $pin (values %{$cell->_pins}) {
+                                            if ($pin->name eq $foundPortName) {
+                                                # Create a new pin
+                                                my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name);
+                                                my @pinselectArr = ($pinselect);
+                                                $cell->new_pin(
+                                                        cell=>$cell,
+                                                        module=>$TopDie_TopMod,
+                                                        name=>$newportname,
+                                                        nets=>$ft_net,
+                                                        portname=>$newportname,
+                                                        port=>$newPort,
+                                                        netlist=>$nl_Top,
+                                                        _pinselects=>\@pinselectArr
+                                                        );
+                                                # Delete the old pin
+                                                $pin->delete;
+                                            }
+                                        }
+                                    }
+                                }
+                                else {
+                                    $log->msg(1, "Direction '$direction' not recognized. Aborting.");
+                                    exit 0;
+                                }
+
                                 
                                 # ... and to the Bottom die, we need to add 2 pins
                                 # one with same direction and same name
@@ -338,25 +397,38 @@ foreach my $inst (@InstancesToMove)
                                 # This is first pin 
                                 # Since copy this one exists already
 
-                                # This is the second pin with oposite direction
+                                # This is the second pin with opposite direction
                                 my $otherDieDirection="none";
-                                if ($foundPort->direction eq "in") { $otherDieDirection="out"; }
-                                if ($foundPort->direction eq "out") { $otherDieDirection="in"; }
+                                my $botnet;
+                                if ($foundPort->direction eq "in") { 
+                                    $otherDieDirection="out";
+                                    $botnet = $foundPort->net;
+                                }
+                                if ($foundPort->direction eq "out") {
+                                    $otherDieDirection="in";
+                                    $botnet = $ft_net;
+                                }
                                
                                 # This is a feedcthough so it has a different name
-                                my $otherDiePortName=$foundPort->name;
-                                $otherDiePortName="ft_$otherDiePortName";
-                                my $newPort_Bot=$BotDie_TopMod->new_port(
-                                                    #name=>$foundPort->name,
+                                my $otherDiePortName=$foundPort->name."_ft_toplevel";
+                                $BotDie_TopMod->new_port(
                                                     name=>$otherDiePortName,
-                                                    #direction=>$foundPort->direction,
+                                                    direction=>$foundPort->direction,
+                                                    data_type=>$foundPort->data_type,
+                                                    array=>$foundPort->array,
+                                                    module=>$TopDie_TopMod->name,
+                                                    net=>$botnet
+                                                    );
+                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die as a feedthrough");
+                                $BotDie_TopMod->new_port(
+                                                    name=>$foundPort->name,
                                                     direction=>$otherDieDirection,
                                                     data_type=>$foundPort->data_type,
                                                     array=>$foundPort->array,
                                                     module=>$TopDie_TopMod->name,
-                                                    net=>$foundPort->net
+                                                    net=>$botnet
                                                     );
-                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die");
+                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $otherDieDirection added to Bot die");
                                 }
                         }
                                                 
@@ -529,7 +601,7 @@ foreach my $inst (@InstancesToMove)
                                     
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly added to Top die");
 
-                                        # This is the second pin with oposite direction
+                                        # This is the second pin with opposite direction
                                         my $otherDieDirection="none";
                                         if ($pindir_lc eq "input")  { $otherDieDirection="output"; }
                                         if ($pindir_lc eq "output") { $otherDieDirection="input"; }
@@ -586,10 +658,11 @@ foreach my $port ($BotDie_TopMod->ports){
 
 foreach my $port ($TopDie_TopMod->ports){
     my $portName = $port->name;
+    $log->msg(2, "Top die, working on port '$portName'");
     my $portNet = $port->net;
     my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
     my @pinselectArr = ($pinselect);
-    $topdiecell->new_pin(
+    my $tmppin = $topdiecell->new_pin(
                     cell=>$topdiecell,
                     module=>$TopDie_TopMod,
                     name=>$port->name,
@@ -769,7 +842,7 @@ sub write_nl {
     my $nl = shift;
     my $file_name = shift;
     
-    # Preapre file to write 
+    # Prepare file to write 
     $nl->link;
     my $fh = IO::File->new($file_name, "w") or die "%Error: $! creating dump file,";
     print $fh $nl->verilog_text;
