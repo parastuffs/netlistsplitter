@@ -308,6 +308,7 @@ foreach my $inst (@InstancesToMove)
                         # CASE 1
                         # Net is connected to a top-level port of the src netlist
                         # We look for the name only 
+                        # => Feedthrough, but not a 3D net.
                         my $foundPort=$TopModule->find_port($netNameOnly);
                         if (defined $foundPort) 
                         {
@@ -429,12 +430,17 @@ foreach my $inst (@InstancesToMove)
                                                     net=>$botnet
                                                     );
                                 $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $otherDieDirection added to Bot die");
-                                }
+                            }
+                            my $foundNet=$TopModule->find_net($netNameOnly);
+                            if (defined $foundNet) {
+                                $foundNet->delete;
+                            }
+                            last
                         }
                                                 
                         #=======================================
                         # CASE 2
-                        # Net is a wire  
+                        # Net is a wire, meaning no corresponding port on toplevel netlist.
                         my $foundNet=$TopModule->find_net($netNameOnly);
                         my $isBus=0;
                         my $netIs3D=0;
@@ -841,6 +847,14 @@ return (@NetCellNames);
 sub write_nl {
     my $nl = shift;
     my $file_name = shift;
+
+    my $mod=$nl->find_module("TopDie");
+    if (defined $mod) {
+        foreach my $net ($mod->nets_sorted) {
+            my $netName = $net->name;
+            $log->msg(2, "Net: '$netName'");
+        }
+    }
     
     # Prepare file to write 
     $nl->link;
