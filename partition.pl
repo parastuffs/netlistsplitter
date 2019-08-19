@@ -415,9 +415,13 @@ foreach my $inst (@InstancesToMove)
                                 #                         module=>$TopDie_TopMod->name
                                 #                         );
 
+                                my $netdirection;
+                                my $ftnetdirection;
                                 # Input going to top die, in bottom we need 1. an output feedthrough and 2. an input regular.
                                 if ($direction eq "in") { 
                                     $otherDieDirection="out";
+                                    $netdirection = "input";
+                                    $ftnetdirection = "output";
                                     # temp
                                     # $botnetft = $foundPort->net;
                                     # my $tmp = $botnetft->name;
@@ -426,6 +430,8 @@ foreach my $inst (@InstancesToMove)
                                 # Output going to top die, in bottom we need 1. an input feedthrough and 2. an output regular.
                                 if ($direction eq "out") {
                                     $otherDieDirection="in";
+                                    $netdirection = "output";
+                                    $ftnetdirection = "input";
                                 }
                                
                                 # Feedthrough port, other direction
@@ -436,7 +442,7 @@ foreach my $inst (@InstancesToMove)
                                                                 lsb=>$ft_net->lsb,
                                                                 msb=>$ft_net->msb,
                                                                 name=>$ft_net->name,
-                                                                net_type=>$ft_net->net_type,
+                                                                net_type=>$ftnetdirection,
                                                                 value=>$ft_net->value,
                                                                 width=>$ft_net->width
                                                                 );
@@ -455,7 +461,7 @@ foreach my $inst (@InstancesToMove)
                                                                 lsb=>$foundPort->net->lsb,
                                                                 msb=>$foundPort->net->msb,
                                                                 name=>$foundPort->net->name,
-                                                                net_type=>$foundPort->net->net_type,
+                                                                net_type=>$netdirection,
                                                                 value=>$foundPort->net->value,
                                                                 width=>$foundPort->net->width
                                                                 );
@@ -467,31 +473,26 @@ foreach my $inst (@InstancesToMove)
                                                     module=>$TopDie_TopMod->name,
                                                     net=>$botnet
                                                     );
+                                # print STDOUT "mouette ".$tmpport->
                                 my $botnetname = $botnet->name;
                                 $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die as a feedthrough, with net named '$botnetname'");
                                 $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $otherDieDirection added to Bot die");
-
+                                # $nl_Bot->link();
                                 # Assign ft = input;
                                 if ($direction eq "in") { 
-                                    $otherDieDirection="out";
-                                    $BotDie_TopMod->new_net(data_type=>"assign",
-                                                        net_type=>"",
-                                                        decl_type=>"",
-                                                        module=>$BotDie_TopMod,
-                                                        name=>$botnetft->name,
-                                                        value=>$botnet->name
-                                                        );
+                                    $BotDie_TopMod->new_contassign(keyword=>"assign",
+                                                                lhs=>$botnetft->name,
+                                                                rhs=>$botnet->name,
+                                                                module=>$BotDie_TopMod
+                                                                );
                                 }
                                 # Assign output = ft;
                                 if ($direction eq "out") {
-                                    $otherDieDirection="in";
-                                    $BotDie_TopMod->new_net(data_type=>"assign",
-                                                        net_type=>"",
-                                                        decl_type=>"",
-                                                        module=>$BotDie_TopMod,
-                                                        name=>$botnet->name,
-                                                        value=>$botnetft->name
-                                                        );
+                                    $BotDie_TopMod->new_contassign(keyword=>"assign",
+                                                                rhs=>$botnetft->name,
+                                                                lhs=>$botnet->name,
+                                                                module=>$BotDie_TopMod
+                                                                );
                                 }
                             }
                             my $foundNet=$TopModule->find_net($netNameOnly);
@@ -553,7 +554,7 @@ foreach my $inst (@InstancesToMove)
                                     if (defined $portInTop2) 
                                         {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");}
                                     else
-                                    # if not look for the LEF file to discover the direction
+                                    # if not, look in the LEF file to discover the direction
                                     {
                                         my $foundInstName = $foundInst->name;
                                         my $foundInstSubmodname = $foundInst->submodname;
@@ -684,6 +685,12 @@ foreach my $inst (@InstancesToMove)
                                                             net=>$foundNet
                                                             );
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly with dir: $otherDieDirection added to Bot die");
+                                        $BotDie_TopMod->new_net(name=>$netNameOnly,
+                                                        array=>$foundNet->array,
+                                                        data_type=>$foundNet->data_type,
+                                                        module=>$BotDie_TopMod,
+                                                        port=>$newPort_Bot
+                                                        );
 
                                         $TopLevel_TopMod->new_net(
                                                             name=>$netNameOnly,
