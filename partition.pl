@@ -538,7 +538,7 @@ foreach my $inst (@InstancesToMove)
                                             my $newNet=$TopDie_TopMod->new_net(name=>$netNameOnly,
                                                         array=>$foundNet->array,
                                                         data_type=>$foundNet->data_type,
-                                                        module=>$TopDie_TopMod->name
+                                                        module=>$TopDie_TopMod
                                                         );
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Wire (2D): $netNameOnly added to Top die");
                                     }
@@ -574,7 +574,7 @@ foreach my $inst (@InstancesToMove)
                                                             direction=>$pindir_lc,
                                                             data_type=>$foundNet->data_type,
                                                             #array=>$foundPort->array,
-                                                            module=>$TopDie_TopMod->name,
+                                                            module=>$TopDie_TopMod,
                                                             net=>$foundNet
                                                     );
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D wire port: $netNameOnly added to Top die");
@@ -588,13 +588,13 @@ foreach my $inst (@InstancesToMove)
                                                             direction=>$otherDieDirection,
                                                             data_type=>$foundNet->data_type,
                                                             #array=>$foundPort->array,
-                                                            module=>$TopDie_TopMod->name,
+                                                            module=>$TopDie_TopMod,
                                                             net=>$foundNet
                                                             );
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port: $netNameOnly added to Bot die");
                                         $TopLevel_TopMod->new_net(name=>$netNameOnly,
                                                                 data_type=>"",#wire
-                                                                module=>$TopLevel_TopMod->name,
+                                                                module=>$TopLevel_TopMod,
                                                                 comment=>"// 3D net"
                                                                 );
                                         
@@ -635,7 +635,7 @@ foreach my $inst (@InstancesToMove)
                                             my $newNet=$TopDie_TopMod->new_net(name=>$netNameOnly,
                                                         array=>$foundNet->array,
                                                         data_type=>$foundNet->data_type,
-                                                        module=>$TopDie_TopMod->name
+                                                        module=>$TopDie_TopMod
                                                         );
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 2D local bus: $netNameOnly added to Top die");
                                     }
@@ -664,7 +664,7 @@ foreach my $inst (@InstancesToMove)
                                                     # direction is the same as top
                                                     direction=>$pindir_lc,
                                                     data_type=>$foundNet->data_type,
-                                                    module=>$TopDie_TopMod->name,
+                                                    module=>$TopDie_TopMod,
                                                     net=>$foundNet
                                                     );
                                     
@@ -680,7 +680,7 @@ foreach my $inst (@InstancesToMove)
                                                             name=>$netNameOnly,
                                                             direction=>$otherDieDirection,
                                                             data_type=>$foundNet->data_type,
-                                                            module=>$TopDie_TopMod->name,
+                                                            module=>$TopDie_TopMod,
                                                             net=>$foundNet
                                                             );
                                         $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly with dir: $otherDieDirection added to Bot die");
@@ -688,7 +688,7 @@ foreach my $inst (@InstancesToMove)
                                         $TopLevel_TopMod->new_net(
                                                             name=>$netNameOnly,
                                                             data_type=>$foundNet->data_type,
-                                                            module=>$TopLevel_TopMod->name,
+                                                            module=>$TopLevel_TopMod,
                                                             comment=>"// 3D bus"
                                                             );
                                     }
