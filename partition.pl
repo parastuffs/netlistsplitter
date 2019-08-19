@@ -470,6 +470,29 @@ foreach my $inst (@InstancesToMove)
                                 my $botnetname = $botnet->name;
                                 $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die as a feedthrough, with net named '$botnetname'");
                                 $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $otherDieDirection added to Bot die");
+
+                                # Assign ft = input;
+                                if ($direction eq "in") { 
+                                    $otherDieDirection="out";
+                                    $BotDie_TopMod->new_net(data_type=>"assign",
+                                                        net_type=>"",
+                                                        decl_type=>"",
+                                                        module=>$BotDie_TopMod,
+                                                        name=>$botnetft->name,
+                                                        value=>$botnet->name
+                                                        );
+                                }
+                                # Assign output = ft;
+                                if ($direction eq "out") {
+                                    $otherDieDirection="in";
+                                    $BotDie_TopMod->new_net(data_type=>"assign",
+                                                        net_type=>"",
+                                                        decl_type=>"",
+                                                        module=>$BotDie_TopMod,
+                                                        name=>$botnet->name,
+                                                        value=>$botnetft->name
+                                                        );
+                                }
                             }
                             my $foundNet=$TopModule->find_net($netNameOnly);
                             # if (defined $foundNet) {
