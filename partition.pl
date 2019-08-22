@@ -775,45 +775,39 @@ foreach my $inst (@InstancesToMove)
                 foreach my $cell ($TopDie_TopMod->cells) {
                     foreach my $pin (values %{$cell->_pins}) {
                         # TODO this condition is probably wrong. I don't want the pin with the same name as the port, I want to pin to which is connected a net with the same name as the port.
-                        my $pinname = $pin->name;
-                        print STDOUT "Comparing $pinname and $oldportname\n";
-                        if ($pin->name eq $oldportname) {
-                            $log->msg(3, "About to delete pin $pinname");
-                            # Delete the old pin
-                            # print STDOUT Dumper($pin);
-                            $pin->delete; # If this fails, maybe a link() is missing somewhere.
-                            # Create a new pin
-                            my $ft_net = $newPort->net;
-                            my $ftnetname = $ft_net->name;
-                            print STDOUT "chouette $ftnetname\n";
-                            my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $ft_net->msb, $ft_net->lsb);
-                            my @pinselectArr = ();
-                            push @pinselectArr, $pinselect;
-                            # my @pinselectArr = ($pinselect);
-                            # print STDOUT "BEFORE\n";
-                            # foreach my $pin ($cell->pins_sorted){
-                            #     my $pinnamebefore = $pin->name;
-                            #     print STDOUT "$pinnamebefore\n";
-                            # }
-                            my $newpin = $cell->new_pin(
-                                                cell=>$cell,
-                                                module=>$TopDie_TopMod,
-                                                name=>$pinname,
-                                                # nets=>$ft_net, # this should be done through link()
-                                                portname=>$pinname,
-                                                # port=>$newPort,
-                                                netlist=>$nl_Top,
-                                                _pinselects=>\@pinselectArr
-                                                );
-                            # print STDOUT "AFTER\n";
-                            # foreach my $pin ($cell->pins_sorted){
-                            #     my $pinnameafter = $pin->name;
-                            #     print STDOUT "$pinnameafter\n";
-                            # }
-                            $TopDie_TopMod->link();
-                            my $newpinname = $newpin->name;
-                            $log->msg(3, "New pin name: $newpinname");
-                        }
+                        foreach my $pinselect ($pin->pinselects) {
+                            # If at least one net connected to the pin is of the renamed port, change the pin.
+                            if ($pinselect->netname eq $oldportname) {
+                                my $pinname = $pin->name;
+                                # print STDOUT "Comparing $pinname and $oldportname\n";
+                                $log->msg(3, "About to delete pin $pinname");
+                                # Delete the old pin
+                                # print STDOUT Dumper($pin);
+                                $pin->delete; # If this fails, maybe a link() is missing somewhere.
+                                # Create a new pin
+                                my $ft_net = $newPort->net;
+                                my $ftnetname = $ft_net->name;
+                                print STDOUT "chouette $ftnetname\n";
+                                my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $ft_net->msb, $ft_net->lsb);
+                                my @pinselectArr = ();
+                                push @pinselectArr, $pinselect;
+                                my $newpin = $cell->new_pin(
+                                                    cell=>$cell,
+                                                    module=>$TopDie_TopMod,
+                                                    name=>$pinname,
+                                                    # nets=>$ft_net, # this should be done through link()
+                                                    portname=>$pinname,
+                                                    # port=>$newPort,
+                                                    netlist=>$nl_Top,
+                                                    _pinselects=>\@pinselectArr
+                                                    );
+                                $TopDie_TopMod->link();
+                                my $newpinname = $newpin->name;
+                                $log->msg(3, "New pin name: $newpinname");
+                                # Go on with the next pin.
+                                last;
+                            }
+                        }  
                     }
                 }
             }
