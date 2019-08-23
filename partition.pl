@@ -731,7 +731,7 @@ foreach my $port ($BotDie_TopMod->ports){
     my $portName = $port->name;
     my $portNet = $port->net;
     # Do not set msb/lsb when creating the PinSelection, otherwise if the net is a bus, the width will appear in the pin connection.
-    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
+    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
     my @pinselectArr = ($pinselect);
     $botdiecell->new_pin(
                     cell=>$botdiecell,
@@ -750,7 +750,7 @@ foreach my $port ($TopDie_TopMod->ports){
     my $portName = $port->name;
     $log->msg(5, "Top die, working on port '$portName'");
     my $portNet = $port->net;
-    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
+    my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
     my @pinselectArr = ($pinselect);
     my $tmppin = $topdiecell->new_pin(
                     cell=>$topdiecell,
