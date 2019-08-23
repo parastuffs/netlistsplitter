@@ -13,7 +13,7 @@ use File::Log;
 use Data::Dumper;
 
 my $log = File::Log->new({
-  debug           => 5,                   # Set the debug level
+  debug           => 3,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -100,10 +100,10 @@ my %hashNetCell;
 #------------------------------------------------------------------------
 # SPC Core 
 #------------------------------------------------------------------------
-# my $root=("prt_spc");
-# my @VerilogFiles=("./$root/spc_flat_m.v");
-# my $path_to_file = ("./$root/spc.prt");
-# my $TopModuleName=("spc");
+my $root=("prt_spc");
+my @VerilogFiles=("./$root/spc_flat_m.v");
+my $path_to_file = ("./$root/spc.prt");
+my $TopModuleName=("spc");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -116,10 +116,10 @@ my %hashNetCell;
 #my $path_to_file = ("./$root/spc.prt");
 #my $TopModuleName=("spc");
 
-my $root=("prt_exu");
-my @VerilogFiles=("./$root/exu_flat_m.v");
-my $path_to_file = ("./$root/exu.prt");
-my $TopModuleName=("exu");
+# my $root=("prt_exu");
+# my @VerilogFiles=("./$root/exu_flat_m.v");
+# my $path_to_file = ("./$root/exu.prt");
+# my $TopModuleName=("exu");
 #------------------------------------------------------------------------
 
 #***************************************************************************
@@ -200,15 +200,9 @@ my $BotDie_TopMod=$nl_Bot->find_module($TopModuleName);
 if (! defined $TopModule) {$log->msg(2, "Could't find top module in bot die: $TopModuleName"); exit;}
     else
         {
-        $log->msg(2, "Renaming top module of the bottom die: $TopModuleName");
+        # $log->msg(2, "Renaming top module of the bottom die: $TopModuleName");
         # $BotDie_TopMod->name='BotDie';
-    }    
-
-# foreach my $port ($TopModule->ports) {
-#     my $portName = $port->name;
-#    $log->msg(3, "Port: $portName");
-#    # $port->dump;
-# }
+    }
 
 
 my $topdiecell = $TopLevel_TopMod->new_cell(name=>"top_die",
@@ -270,7 +264,7 @@ my @ft_in = ();
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 foreach my $inst (@InstancesToMove) 
 {
-    $log->msg(2, "Searching instance: $inst");
+    $log->msg(5, "Searching instance: $inst");
     my $foundInst=$TopModule->find_cell($inst);
     if (! defined $foundInst) {$log->msg(5, "ERROR: can't find instance $inst <-");}
     else {
@@ -288,7 +282,6 @@ foreach my $inst (@InstancesToMove)
             # my $thisPinDirection=$pin->direction;
             my $pinName = $pin->name;
             $log->msg(5, "$indent $indent Pin: $pinName <-");
-            # undef %newports; # TODO Check where I should undef this, exactly.
             
             # Get net(s) connected to this pin
             foreach my $pinselect ($pin->pinselects)
@@ -307,17 +300,6 @@ foreach my $inst (@InstancesToMove)
                 }
                 $pinselectNetname =~ s/(^\{)|(\}$)//g;
                 my @netnames = split(',',   $pinselectNetname);
-
-
-                #my $tmp=$pinselect->netname;
-                #$tmp=~ s/\{//g;
-                #$tmp=~ s/\}//g;
-                #$tmp=~ s/\[([^\[\]]|(?0))*]//g;
-                #my @answer = split(',', $tmp);
-                #foreach (@answer) {$log->msg(5, "$_");}
-
-                # Hash with the new ports created for these nets.
-                # {oldportname => Verilog::Netlist::Port newport}
                 
 
                 foreach my $netcompletename (@netnames){
@@ -347,37 +329,8 @@ foreach my $inst (@InstancesToMove)
                             # if not add port the Top die with same direction as in src netlist
                             my $direction = $foundPort->direction;
                             my $foundPortDirection = $foundPort->direction;
-                            # if ($direction eq "in") {
-                            #     my $newPort=$TopDie_TopMod->new_port(name=>$foundPort->name,
-                            #                         # direction is the same as top
-                            #                         direction=>$foundPort->direction,
-                            #                         data_type=>$foundPort->data_type,
-                            #                         array=>$foundPort->array,
-                            #                         module=>$TopDie_TopMod->name,
-                            #                         net=>$foundPort->net
-                            #                         );
-                            #     $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $foundPortDirection added to TopDie");
-                            #     push(@ft_in, $foundPort->name);
-                            # }
-                            # elsif ($direction eq "out") {
-
-                            # }
-                            # else {
-                            #     $log->msg(1, "Direction '$direction' not recognized. Aborting.");
-                            #     exit 0;
-                            # }
                             # Create a feedthrough net
                             my $newportname = $foundPort->name."_ft_toplevel";
-                            # $ft_net = new Verilog::Netlist::Net(array=>$foundPort->net->array,
-                            #                                 data_type=>$foundPort->net->data_type,
-                            #                                 module=>$TopLevel_TopMod,
-                            #                                 lsb=>$foundPort->net->lsb,
-                            #                                 msb=>$foundPort->net->msb,
-                            #                                 name=>$newportname,
-                            #                                 net_type=>$foundPort->net->net_type,
-                            #                                 value=>$foundPort->net->value,
-                            #                                 width=>$foundPort->net->width
-                            #                                 );
                             $ft_net = $TopLevel_TopMod->new_net(array=>$foundPort->net->array,
                                                             data_type=>$foundPort->net->data_type,
                                                             module=>$TopLevel_TopMod,
@@ -409,37 +362,9 @@ foreach my $inst (@InstancesToMove)
                             # my $tmpnetname = $newPort->net->name;
                             # print STDOUT "mouette $tmpnetname\n";
 
-                            $log->msg(3, "Adding $foundPortName and its new port to the hash newpors.");
+                            $log->msg(5, "Adding $foundPortName and its new port to the hash newpors.");
 
                             $newports{$foundPortName} = $newPort;
-
-                            # # Now change the pin name in all the cells using it.
-                            # foreach my $cell ($TopDie_TopMod->cells) {
-                            #     foreach my $pin (values %{$cell->_pins}) {
-                            #         # TODO this condition is probably wrong. I don't want the pin with the same name as the port, I want to pin to which is connected a net with the same name as the port.
-                            #         if ($pin->name eq $foundPortName) {
-                            #             # Create a new pin
-                            #             my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $ft_net->msb, $ft_net->lsb);
-                            #             my @pinselectArr = ();
-                            #             push @pinselectArr, $pinselect;
-                            #             # my @pinselectArr = ($pinselect);
-                            #             $cell->new_pin(
-                            #                     cell=>$cell,
-                            #                     module=>$TopDie_TopMod,
-                            #                     name=>$pin->name,
-                            #                     # nets=>$ft_net, # this should be done through link()
-                            #                     portname=>$newportname,
-                            #                     port=>$newPort,
-                            #                     netlist=>$nl_Top,
-                            #                     _pinselects=>\@pinselectArr
-                            #                     );
-                            #             # Delete the old pin
-                            #             my $pinname = $pin->name;
-                            #             $log->msg(2, "Ima deleting the pin $pinname");
-                            #             $pin->delete;
-                            #         }
-                            #     }
-                            # }
 
                             
                             # ... and to the Bottom die, we need to add 2 pins
@@ -447,14 +372,6 @@ foreach my $inst (@InstancesToMove)
                             # one with opposite direction so that we feedthrough
 
                             my $otherDieDirection="none";
-                            # my $botnet = $foundPort->net;
-                            # my $botnetft = $ft_net;
-
-                            # $BotDie_TopMod->new_net(name=>$netNameOnly,
-                            #                         array=>$foundNet->array,
-                            #                         data_type=>$foundNet->data_type,
-                            #                         module=>$TopDie_TopMod->name
-                            #                         );
 
                             my $netdirection;
                             my $ftnetdirection;
@@ -463,10 +380,6 @@ foreach my $inst (@InstancesToMove)
                                 $otherDieDirection="out";
                                 $netdirection = "input";
                                 $ftnetdirection = "output";
-                                # temp
-                                # $botnetft = $foundPort->net;
-                                # my $tmp = $botnetft->name;
-                                # $log->msg(1, "Mouette $tmp.");
                             }
                             # Output going to top die, in bottom we need 1. an input feedthrough and 2. an output regular.
                             if ($direction eq "out") {
@@ -565,7 +478,6 @@ foreach my $inst (@InstancesToMove)
                                 $isBus=0;
                             }
                         if ($isBus == 0) {
-                            #$log->msg(5, Dumper($foundNet));
                             $netIs3D = isNet3D($foundNet->name, \@InstancesToMove_clean);
                        
                             if ($netIs3D == 0)  
@@ -764,30 +676,25 @@ foreach my $inst (@InstancesToMove)
                     }
                 }
             }
-            foreach my $tmpkey (keys %newports) {
-                print STDOUT "scaphandre $tmpkey\n";
-            }
-            # %newports($foundPortName) = $newPort;
+
             # Go through all the new ports
             foreach my $oldportname (keys %newports) {
                 my $newPort = $newports{$oldportname};
                 # Now change the pin name in all the cells using it.
                 foreach my $cell ($TopDie_TopMod->cells) {
                     foreach my $pin (values %{$cell->_pins}) {
-                        # TODO this condition is probably wrong. I don't want the pin with the same name as the port, I want to pin to which is connected a net with the same name as the port.
                         foreach my $pinselect ($pin->pinselects) {
                             # If at least one net connected to the pin is of the renamed port, change the pin.
                             if ($pinselect->netname eq $oldportname) {
                                 my $pinname = $pin->name;
                                 # print STDOUT "Comparing $pinname and $oldportname\n";
-                                $log->msg(3, "About to delete pin $pinname");
+                                $log->msg(5, "About to delete pin $pinname");
                                 # Delete the old pin
                                 # print STDOUT Dumper($pin);
                                 $pin->delete; # If this fails, maybe a link() is missing somewhere.
                                 # Create a new pin
                                 my $ft_net = $newPort->net;
                                 my $ftnetname = $ft_net->name;
-                                print STDOUT "chouette $ftnetname\n";
                                 my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $ft_net->msb, $ft_net->lsb);
                                 my @pinselectArr = ();
                                 push @pinselectArr, $pinselect;
@@ -803,7 +710,7 @@ foreach my $inst (@InstancesToMove)
                                                     );
                                 $TopDie_TopMod->link();
                                 my $newpinname = $newpin->name;
-                                $log->msg(3, "New pin name: $newpinname");
+                                $log->msg(5, "New pin name: $newpinname");
                                 # Go on with the next pin.
                                 last;
                             }
@@ -811,12 +718,6 @@ foreach my $inst (@InstancesToMove)
                     }
                 }
             }
-            # foreach my $cell ($TopDie_TopMod->cells) {
-            #     foreach my $pin (values %{$cell->_pins}) {
-            #         my $pinname = $pin->name;
-            #         $log->msg(3, "Checking pins: $pinname");
-            #     }
-            # }
         }
     }
 }
@@ -828,7 +729,6 @@ $log->msg(2, "Creating pins in top and bottom instanciations in toplevel.");
 
 foreach my $port ($BotDie_TopMod->ports){
     my $portName = $port->name;
-    # $log->msg(2, "Working on port '$portName'");
     my $portNet = $port->net;
     # Do not set msb/lsb when creating the PinSelection, otherwise if the net is a bus, the width will appear in the pin connection.
     my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
@@ -848,7 +748,7 @@ foreach my $port ($BotDie_TopMod->ports){
 
 foreach my $port ($TopDie_TopMod->ports){
     my $portName = $port->name;
-    $log->msg(2, "Top die, working on port '$portName'");
+    $log->msg(5, "Top die, working on port '$portName'");
     my $portNet = $port->net;
     my $pinselect = new Verilog::Netlist::PinSelection($portNet->name);
     my @pinselectArr = ($pinselect);
@@ -930,35 +830,11 @@ my $fl     = shift;
 
 my $submodname = $cell->submodname;
 
-
-                                    # $TopDie_TopMod->new_net(name=>$newportname,
-                                    #                 array=>$ft_net->array,
-                                    #                 data_type=>$ft_net->data_type,
-                                    #                 module=>$TopDie_TopMod,
-                                    #                 port=>$newPort
-                                    #                 );
-
 my $cellAdded=$module->new_cell(
                             name=>$cell->name,
                             submodname=>$cell->submodname,
                             _pins=>$cell->_pins,
                             @fl);
-# foreach my $pin ($cell->pins) {
-#     my @pinselectArr = ();
-#     foreach my $pinnet ($pin->nets) {
-#         my $pinselect = new Verilog::Netlist::PinSelection($pinnet->name, $pinnet->msb, $pinnet->lsb);
-#         push @pinselectArr, $pinselect;
-#     }
-#     $cellAdded->new_pin(
-#             cell=>$cellAdded,
-#             module=>$module,
-#             name=>$pin->name,
-#             # nets=>$ft_net, # this should be done through link()
-#             # port=>$newPort,# I guess this would be the port of the submodule. Not needed here if that's the case.
-#             netlist=>$nl_Top,# TODO this should be a fucntion parameter
-#             _pinselects=>\@pinselectArr
-#             );
-# }
 my $cellName = $cell->name;
 if (! defined $cellAdded) {$log->msg(2, "Could not add cell: $cellName ");}
 else
@@ -1055,31 +931,9 @@ return (@NetCellNames);
 sub write_nl {
     my $nl = shift;
     my $file_name = shift;
-
-    my $mod=$nl->find_module("TopDie");
-    if (defined $mod) {
-        foreach my $net ($mod->nets_sorted) {
-            my $netName = $net->name;
-            $log->msg(2, "Net: '$netName'");
-        }
-    }
-
-            foreach my $cell ($TopDie_TopMod->cells) {
-                foreach my $pin (values %{$cell->_pins}) {
-                    my $pinname = $pin->name;
-                    $log->msg(3, "Checking pins: $pinname");
-                }
-            }
     
     # Prepare file to write 
     $nl->link;
-
-            foreach my $cell ($TopDie_TopMod->cells) {
-                foreach my $pin (values %{$cell->_pins}) {
-                    my $pinname = $pin->name;
-                    $log->msg(3, "Checking pins: $pinname");
-                }
-            }
     my $fh = IO::File->new($file_name, "w") or die "%Error: $! creating dump file,";
     print $fh $nl->verilog_text;
     $fh->close;
