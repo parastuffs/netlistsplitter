@@ -344,7 +344,7 @@ foreach my $inst (@InstancesToMove)
                                                             lsb=>$foundPort->net->lsb,
                                                             msb=>$foundPort->net->msb,
                                                             name=>$newportname,
-                                                            net_type=>$foundPort->net->net_type,
+                                                            net_type=>"wire", # ft net on toplevel is just a wire
                                                             value=>$foundPort->net->value,
                                                             width=>$foundPort->net->width
                                                             );
