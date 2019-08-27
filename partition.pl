@@ -710,8 +710,21 @@ foreach my $inst (@InstancesToMove)
                                 $pin->delete; # If this fails, maybe a link() is missing somewhere.
                                 # Create a new pin
                                 my $ft_net = $newPort->net;
+
+                                # Build the name of the net by extracting the possible bus range.
+                                my $msb = $ft_net->msb;
+                                my $lsb = $ft_net->lsb;
+                                if ($pinselect->netname =~ m/\[(\d+):?([\d]*)\]/){
+                                    $msb = $1;
+                                    $lsb = $2;
+                                    # print STDOUT "It's a bus right there! msb: '$msb', lsb: '$lsb'\n";
+                                }
+                                if ($lsb eq ""){
+                                    $lsb = $msb;
+                                }
+
                                 my $ftnetname = $ft_net->name;
-                                my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $ft_net->msb, $ft_net->lsb);
+                                my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $msb, $lsb);
                                 my @pinselectArr = ();
                                 push @pinselectArr, $pinselect;
                                 my $newpin = $cell->new_pin(
