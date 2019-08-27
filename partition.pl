@@ -13,7 +13,7 @@ use File::Log;
 use Data::Dumper;
 
 my $log = File::Log->new({
-  debug           => 3,                   # Set the debug level
+  debug           => 5,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -100,10 +100,17 @@ my %hashNetCell;
 #------------------------------------------------------------------------
 # SPC Core 
 #------------------------------------------------------------------------
-my $root=("prt_spc");
-my @VerilogFiles=("./$root/spc_flat_m.v");
-my $path_to_file = ("./$root/spc.prt");
-my $TopModuleName=("spc");
+# my $root=("prt_spc");
+# my @VerilogFiles=("./$root/spc_flat_m.v");
+# my $path_to_file = ("./$root/spc.prt");
+# my $TopModuleName=("spc");
+
+# ArmM0
+my $root=("armM0");
+my @VerilogFiles=("./$root/ArmM0.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("ArmM0");
+my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -126,7 +133,7 @@ my $TopModuleName=("spc");
 # Parse LEF file 
 # Read LEF to get pin directions of macros 
 my $LEF = LEF->new({name => "all",
-                    file_name => "LEF/all.lef",
+                    file_name => $lefpath,
                    });
 
 # Open file, get data & build internal data structures
@@ -362,7 +369,7 @@ foreach my $inst (@InstancesToMove)
                             # my $tmpnetname = $newPort->net->name;
                             # print STDOUT "mouette $tmpnetname\n";
 
-                            $log->msg(5, "Adding $foundPortName and its new port to the hash newpors.");
+                            $log->msg(5, "Adding $foundPortName and its new port to the hash newports.");
 
                             $newports{$foundPortName} = $newPort;
 
@@ -540,6 +547,10 @@ foreach my $inst (@InstancesToMove)
                                                     module=>$TopDie_TopMod,
                                                     port=>$newPort
                                                     );
+                                    # $TopDie_TopMod->link();
+
+                                    $log->msg(5, "Adding $netNameOnly and its new port to the hash newports. (3D net)");
+                                    $newports{$netNameOnly} = $newPort;
                             
                                     # ... and to the Bottom die, with opposite direction
                                     my $otherDieDirection="none";
@@ -640,6 +651,9 @@ foreach my $inst (@InstancesToMove)
                                                     module=>$TopDie_TopMod,
                                                     port=>$newPort
                                                     );
+                                    # $TopDie_TopMod->link();
+                                    $log->msg(5, "Adding $netNameOnly and its new port to the hash newports. (3D bus)");
+                                    $newports{$netNameOnly} = $newPort;
                                 
                                     $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly added to Top die");
 
@@ -685,10 +699,12 @@ foreach my $inst (@InstancesToMove)
                     foreach my $pin (values %{$cell->_pins}) {
                         foreach my $pinselect ($pin->pinselects) {
                             # If at least one net connected to the pin is of the renamed port, change the pin.
-                            if ($pinselect->netname eq $oldportname) {
+                            my $pinselectnetname = $pinselect->netname;
+                            $pinselectnetname =~ s/\[([^\[\]]|(?0))*]//g;
+                            if ($pinselectnetname eq $oldportname) {
                                 my $pinname = $pin->name;
                                 # print STDOUT "Comparing $pinname and $oldportname\n";
-                                $log->msg(5, "About to delete pin $pinname");
+                                $log->msg(5, "About to delete pin $pinname because it was connected to $oldportname");
                                 # Delete the old pin
                                 # print STDOUT Dumper($pin);
                                 $pin->delete; # If this fails, maybe a link() is missing somewhere.
@@ -710,7 +726,7 @@ foreach my $inst (@InstancesToMove)
                                                     );
                                 $TopDie_TopMod->link();
                                 my $newpinname = $newpin->name;
-                                $log->msg(5, "New pin name: $newpinname");
+                                $log->msg(5, "New pin name: $newpinname connected to $ftnetname");
                                 # Go on with the next pin.
                                 last;
                             }
@@ -730,7 +746,6 @@ $log->msg(2, "Creating pins in top and bottom instanciations in toplevel.");
 foreach my $port ($BotDie_TopMod->ports){
     my $portName = $port->name;
     my $portNet = $port->net;
-    # Do not set msb/lsb when creating the PinSelection, otherwise if the net is a bus, the width will appear in the pin connection.
     my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
     my @pinselectArr = ($pinselect);
     $botdiecell->new_pin(
