@@ -105,10 +105,17 @@ my %hashNetCell;
 # my $path_to_file = ("./$root/spc.prt");
 # my $TopModuleName=("spc");
 
-# ArmM0
-my $root=("armM0");
+# # ArmM0
+# my $root=("armM0");
+# my @VerilogFiles=("./$root/ArmM0.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ArmM0");
+# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+
+# ArmM0 MAXCUT
+my $root=("armM0_maxcut");
 my @VerilogFiles=("./$root/ArmM0.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $path_to_file = ("./$root/circut_01_NoWires_area.hgr.part");
 my $TopModuleName=("ArmM0");
 my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
@@ -267,6 +274,9 @@ my $indent="   ";
 
 # List of input feedthroughs to top die.
 my @ft_in = ();
+
+# Hash of assignement pairs
+my %assignements; # {lhs => rhs}
 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 foreach my $inst (@InstancesToMove) 
@@ -442,19 +452,11 @@ foreach my $inst (@InstancesToMove)
                             # $nl_Bot->link();
                             # Assign ft = input;
                             if ($direction eq "in") { 
-                                $BotDie_TopMod->new_contassign(keyword=>"assign",
-                                                            lhs=>$botnetft->name,
-                                                            rhs=>$botnet->name,
-                                                            module=>$BotDie_TopMod
-                                                            );
+                                $assignements{$botnetft->name} = $botnet->name;
                             }
                             # Assign output = ft;
                             if ($direction eq "out") {
-                                $BotDie_TopMod->new_contassign(keyword=>"assign",
-                                                            rhs=>$botnetft->name,
-                                                            lhs=>$botnet->name,
-                                                            module=>$BotDie_TopMod
-                                                            );
+                                $assignements{$botnet->name} = $botnetft->name;
                             }
                         }
                         my $foundNet=$TopModule->find_net($netNameOnly);
@@ -791,6 +793,15 @@ foreach my $port ($TopDie_TopMod->ports){
                     _pinselects=>\@pinselectArr
                     );
     $nl_toplevel->link();
+}
+
+# Write assignements
+foreach my $lhs (keys %assignements) {
+    $BotDie_TopMod->new_contassign(keyword=>"assign",
+                                lhs=>$lhs,
+                                rhs=>$assignements{$lhs},
+                                module=>$BotDie_TopMod
+                                );
 }
 #
 # Write netlists
