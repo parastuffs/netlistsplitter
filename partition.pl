@@ -113,11 +113,18 @@ my %hashNetCell;
 # my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 # ArmM0 MAXCUT
-my $root=("armM0_maxcut");
-my @VerilogFiles=("./$root/ArmM0.v");
-my $path_to_file = ("./$root/circut_01_NoWires_area.hgr.part");
-my $TopModuleName=("ArmM0");
-my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+# my $root=("armM0_maxcut");
+# my @VerilogFiles=("./$root/ArmM0.v");
+# my $path_to_file = ("./$root/circut_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ArmM0");
+# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+
+# msp430 QFLOW mincut
+my $root=("msp430");
+my @VerilogFiles=("./$root/openMSP430.rtl.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("openMSP430");
+my $lefpath=("./$root/osu018_stdcells.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -150,7 +157,7 @@ $LEF->parse_LEF();
 # Process partition file  
 # Get the list of instances to move on another die 
 
-open my $handle, '<', $path_to_file;
+open my $handle, '<', $path_to_file or die "Could not open '$path_to_file'";
 my @InstancesToMoveIn;
 my @lines = <$handle>;
 foreach my $line (@lines){
