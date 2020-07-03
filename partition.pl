@@ -120,11 +120,25 @@ my %hashNetCell;
 # my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 # msp430 QFLOW mincut
-my $root=("msp430");
-my @VerilogFiles=("./$root/openMSP430.rtl.v");
+# my $root=("msp430");
+# my @VerilogFiles=("./$root/openMSP430.rtl.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("openMSP430");
+# my $lefpath=("./$root/osu018_stdcells.lef");
+
+# # prt_OpenPiton_l2
+# my $root=("netlistsplitter-master/netlistsplitter-master/prt_OpenPiton_l2");
+# my @VerilogFiles=("./$root/l2_flat_m.v");
+# my $path_to_file = ("./$root/l2.prt");
+# my $TopModuleName=("l2");
+# my $lefpath=("./$root/allOpenPiton.lef");
+
+# LDPC iN7 2020
+my $root=("ldpc-2020");
+my @VerilogFiles=("./$root/ldpc_routed.v");
 my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("openMSP430");
-my $lefpath=("./$root/osu018_stdcells.lef");
+my $TopModuleName=("ldpc");
+my $lefpath=("./$root/iN7.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -179,6 +193,9 @@ foreach my $cellToMove (@InstancesToMoveIn) {
     my $tmp = quotemeta $cellToMove;
     push @InstancesToMove_clean, $tmp;
 }
+
+# Create hash to easily search for instances to move in 3D nets candidates
+my %InstancesToMove_hash = map { $_ => 1 } @InstancesToMove_clean;
 
 #***************************************************************************
 # Process NETLIST  
@@ -895,6 +912,8 @@ else
 sub isNet3D {
     my $netToFind = shift;
     my ($InstancesToMove) = @_;
+
+    # my %InstancesToMove_tmp = map { $_ => 1 } @$InstancesToMove;
     
     my @ConnectedCells;
     my $Is3DNet=0;
@@ -915,34 +934,56 @@ sub isNet3D {
     
     # Compare cells of the net and those that should move
     my $count=0;
+    # OUTER : # loop label for last
+    # foreach my $cell (@ConnectedCells) {
+    #     foreach my $cellToMove (@$InstancesToMove) {
+    #         if ($cell eq $cellToMove) { 
+    #             #$log->msg(2, $indent x 7, "Equal: cell on net: ", $cell, " , & cell to move: ", $cellToMove, "");
+    #             $count=$count+1; 
+    #             }
+    #             else {
+    #                 $log->msg(4, "$indent $indent $indent $indent $indent $indent $indent Diff. cell on net: $cell, & cell to move: $cellToMove");
+    #                 # single cell on another die will cause 
+    #                 # this net to become 3D net
+    #                 # saves computational time
+    #                 last OUTER;
+    #             }
+    #         }
+    #     }
+
     OUTER : # loop label for last
     foreach my $cell (@ConnectedCells) {
-        foreach my $cellToMove (@$InstancesToMove) {
-            if ($cell eq $cellToMove) { 
-                #$log->msg(2, $indent x 7, "Equal: cell on net: ", $cell, " , & cell to move: ", $cellToMove, "");
-                $count=$count+1; 
-                }
-                else {
-                    $log->msg(4, "$indent $indent $indent $indent $indent $indent $indent Diff. cell on net: $cell, & cell to move: $cellToMove");
-                    # single cell on another die will cause 
-                    # this net to become 3D net
-                    # saves computational time
-                    last OUTER;
-                }
-            }
+        if(!exists($InstancesToMove_hash{$cell})) {
+            $count = $count+1;
+            $Is3DNet = 1;
+            # single cell on another die will cause 
+            # this net to become 3D net
+            # saves computational time
+            last OUTER;
         }
-        
-    # Finally figure out if it is a 2D net
-    my $arraySize = @ConnectedCells;
-    # $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Count: $count Array size: $arraySize ");
-    if ($count == $arraySize) { # all cells are on the top die
-        $Is3DNet=0;
+        # else {
+        #     # $log->msg(4, "$indent $indent $indent $indent $indent $indent $indent Diff. cell on net: $cell, & cell to move: $cellToMove");
+        # }
+    }
+
+    if ($Is3DNet) {
+        $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 3D net");
+    }
+    else {
         $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 2D net");
-        } # if not it is a 3D net
-        else {
-            $Is3DNet=1;
-            $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 3D net");
-        }
+    }
+        
+    # # Finally figure out if it is a 2D net
+    # my $arraySize = @ConnectedCells;
+    # # $log->msg(2, "$indent $indent $indent $indent $indent $indent $indent Count: $count Array size: $arraySize ");
+    # if ($count == $arraySize) { # all cells are on the top die
+    #     $Is3DNet=0;
+    #     $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 2D net");
+    #     } # if not it is a 3D net
+    #     else {
+    #         $Is3DNet=1;
+    #         $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 3D net");
+    #     }
     return ($Is3DNet);
 }
 
