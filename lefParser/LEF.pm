@@ -3,6 +3,7 @@ package LEF;
 
 use strict;
 use warnings;
+no warnings 'uninitialized';
 use Macro;
 use Data::Dumper;
  
@@ -125,7 +126,7 @@ sub find_macro {
 	my @macros = @{$self->{macros}};
 	my $macrofound = undef;
 	
-	print "Searching macro: ", $macroTofind , " \n";
+	# print "Searching macro: ", $macroTofind , " \n";
 	
 	foreach my $macro (@macros) 
 	{
