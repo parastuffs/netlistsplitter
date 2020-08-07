@@ -33,3 +33,21 @@ inc/
 /MANIFEST.bak
 /pm_to_blib
 /*.zip
+
+# Exlude logs and working directories
+*.log
+LEF/
+SPC-2020/
+Verilog/
+armM0/
+armM0_buggy_toomany3Dnets/
+armM0_maxcut/
+armM0_old/
+ldpc-2020/
+ldpc-2020_logless/
+ldpc-2020_pinFixed/
+msp430/
+netlistsplitter-master/
+partition_logless.pl
+prt_exu/
+prt_spc/
