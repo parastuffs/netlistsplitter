@@ -2,6 +2,7 @@
 use 5.010;
 use strict;
 use warnings;
+no warnings 'uninitialized';
 # use diagnostics;
 use Test::More;
 # use lib '.';
@@ -11,13 +12,14 @@ use LEF;
 use strict;use Data::Dumper;
 use File::Log;
 use Data::Dumper;
+use Term::ProgressBar;
 
 my $log = File::Log->new({
-  debug           => 5,                   # Set the debug level
+  debug           => 2,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
-  stderrRedirect  => 1,                   # Redirect STDERR to the log file
+  stderrRedirect  => 0,                   # Redirect STDERR to the log file
   defaultFile     => 1,                   # Use the log file as the default filehandle
   logFileDateTime => 1,                   # Timestamp the log filename
   appName         => 'netlistsplitter',   # The name of the application
@@ -105,12 +107,12 @@ my %hashNetCell;
 # my $path_to_file = ("./$root/spc.prt");
 # my $TopModuleName=("spc");
 
-# # ArmM0
-# my $root=("armM0");
-# my @VerilogFiles=("./$root/ArmM0.v");
-# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-# my $TopModuleName=("ArmM0");
-# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+# ArmM0
+my $root=("armM0");
+my @VerilogFiles=("./$root/ArmM0.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("ArmM0");
+my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 # ArmM0 MAXCUT
 # my $root=("armM0_maxcut");
@@ -133,12 +135,26 @@ my %hashNetCell;
 # my $TopModuleName=("l2");
 # my $lefpath=("./$root/allOpenPiton.lef");
 
-# LDPC iN7 2020
-my $root=("ldpc-2020");
-my @VerilogFiles=("./$root/ldpc_routed.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("ldpc");
-my $lefpath=("./$root/iN7.lef");
+# # LDPC iN7 2020
+# my $root=("ldpc-2020");
+# my @VerilogFiles=("./$root/ldpc_routed.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ldpc");
+# my $lefpath=("./$root/iN7.lef");
+
+# # LDPC iN7 2020
+# my $root=("2020_pinFixed");
+# my @VerilogFiles=("./$root/ldpc_routed.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ldpc");
+# my $lefpath=("./$root/iN7.lef");
+
+# # SPC iN7 2020
+# my $root=("SPC-2020");
+# my @VerilogFiles=("./$root/spc_flat_m.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("spc");
+# my $lefpath=("./$root/iN7ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -302,9 +318,16 @@ my @ft_in = ();
 # Hash of assignement pairs
 my %assignements; # {lhs => rhs}
 
+# Progress bar init
+my $progress = Term::ProgressBar->new({ count => scalar @InstancesToMove,
+                                        name => "Moving instances",
+                                        ETA => "linear",
+                                        silent => 0});
+
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 foreach my $inst (@InstancesToMove) 
 {
+    $progress->update();
     $log->msg(5, "Searching instance: $inst");
     my $foundInst=$TopModule->find_cell($inst);
     if (! defined $foundInst) {$log->msg(5, "ERROR: can't find instance $inst <-");}
@@ -881,7 +904,7 @@ if (! defined $foundCell) {$log->msg(2, "Could not delete cell: $cellName ");}
     else
         {
             $foundCell->delete;
-            $log->msg(2, "Deleted cell: $cellName ");
+            $log->msg(3, "Deleted cell: $cellName ");
         }
 }
 
@@ -903,7 +926,7 @@ if (! defined $cellAdded) {$log->msg(2, "Could not add cell: $cellName ");}
 else
     {
     my $cellAddedName = $cellAdded->name;
-    $log->msg(2, "Cell added: $cellAddedName ");
+    $log->msg(3, "Cell added: $cellAddedName ");
     $log->msg(3, "Submodname: $submodname");
     }
 }
