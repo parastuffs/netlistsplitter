@@ -107,12 +107,12 @@ my %hashNetCell;
 # my $path_to_file = ("./$root/spc.prt");
 # my $TopModuleName=("spc");
 
-# ArmM0
-my $root=("armM0");
-my @VerilogFiles=("./$root/ArmM0.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("ArmM0");
-my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+# # ArmM0
+# my $root=("armM0");
+# my @VerilogFiles=("./$root/ArmM0.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ArmM0");
+# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 # ArmM0 MAXCUT
 # my $root=("armM0_maxcut");
@@ -149,12 +149,12 @@ my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 # my $TopModuleName=("ldpc");
 # my $lefpath=("./$root/iN7.lef");
 
-# # SPC iN7 2020
-# my $root=("SPC-2020");
-# my @VerilogFiles=("./$root/spc_flat_m.v");
-# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-# my $TopModuleName=("spc");
-# my $lefpath=("./$root/iN7ALL.lef");
+# SPC iN7 2020
+my $root=("SPC-2020");
+my @VerilogFiles=("./$root/spc.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("spc");
+my $lefpath=("./$root/iN7ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -419,7 +419,7 @@ foreach my $inst (@InstancesToMove)
                                             module=>$TopDie_TopMod,
                                             port=>$newPort
                                             );
-                            $TopDie_TopMod->link();
+                            # $TopDie_TopMod->link(); # Comment to speedup
                             $log->msg(5, "$indent $indent $indent $indent $indent Port: $newportname with dir: $foundPortDirection added to TopDie");
                             push(@ft_in, $foundPort->name);
 
@@ -491,7 +491,7 @@ foreach my $inst (@InstancesToMove)
                                                 module=>$TopDie_TopMod->name,
                                                 net=>$botnet
                                                 );
-                            $BotDie_TopMod->link();
+                            # $BotDie_TopMod->link(); # Comment to speedup
                             # print STDOUT "mouette ".$tmpport->
                             my $botnetname = $botnet->name;
                             $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die as a feedthrough, with net named '$botnetname'");
@@ -786,7 +786,7 @@ foreach my $inst (@InstancesToMove)
                                                     netlist=>$nl_Top,
                                                     _pinselects=>\@pinselectArr
                                                     );
-                                $TopDie_TopMod->link();
+                                # $TopDie_TopMod->link(); # comment to speedup
                                 my $newpinname = $newpin->name;
                                 $log->msg(5, "New pin name: $newpinname connected to $ftnetname");
                                 # Go on with the next pin.
