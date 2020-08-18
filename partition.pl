@@ -843,8 +843,8 @@ foreach my $port ($BotDie_TopMod->ports){
                     netlist=>$nl_toplevel,
                     _pinselects=>\@pinselectArr
                     );
-    $nl_toplevel->link();
 }
+$nl_toplevel->link();
 
 $progress = Term::ProgressBar->new({ count => scalar $BotDie_TopMod->ports,
                                         name => "Toplevel: creating pins in top module",
@@ -867,8 +867,8 @@ foreach my $port ($TopDie_TopMod->ports){
                     netlist=>$nl_toplevel,
                     _pinselects=>\@pinselectArr
                     );
-    $nl_toplevel->link();
 }
+$nl_toplevel->link();
 
 # Write assignements
 foreach my $lhs (keys %assignements) {
