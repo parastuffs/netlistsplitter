@@ -190,7 +190,13 @@ $LEF->parse_LEF();
 open my $handle, '<', $path_to_file or die "Could not open '$path_to_file'";
 my @InstancesToMoveIn;
 my @lines = <$handle>;
+
+my $progress = Term::ProgressBar->new({ count => scalar @lines,
+                                        name => "Reading instances to move",
+                                        ETA => "linear",
+                                        silent => 0});
 foreach my $line (@lines){
+    $progress->update();
     chomp $line;
     my @linesplit = split(' ', $line);
     if ($linesplit[1] == '1') {
@@ -202,8 +208,13 @@ close $handle;
 my @InstancesToMove;
 my @InstancesToMove_clean;
 
+$progress = Term::ProgressBar->new({ count => scalar @InstancesToMoveIn,
+                                        name => "Creating instances hash",
+                                        ETA => "linear",
+                                        silent => 0});
 # Clean from nasty characters
 foreach my $cellToMove (@InstancesToMoveIn) {
+    $progress->update();
     push @InstancesToMove, $cellToMove;
     $cellToMove=~ s/\s//g;
     my $tmp = quotemeta $cellToMove;
@@ -269,8 +280,13 @@ my $botdiecell = $TopLevel_TopMod->new_cell(name=>"bot_die",
                         submod=>$BotDie_TopMod,
                         submodname=>$BotDie_TopMod->name);
 
+$progress = Term::ProgressBar->new({ count => scalar $TopModule->ports,
+                                        name => "Creating ports in Top",
+                                        ETA => "linear",
+                                        silent => 0});
 # Copy ports from bottom die into toplevel.
 foreach my $port ($TopModule->ports) {
+    $progress->update();
     my $netname = $port->net->name;
     $log->msg(5, "netname in bottom port: $netname");
     $TopLevel_TopMod->new_port(data_type=>$port->data_type,
@@ -319,7 +335,7 @@ my @ft_in = ();
 my %assignements; # {lhs => rhs}
 
 # Progress bar init
-my $progress = Term::ProgressBar->new({ count => scalar @InstancesToMove,
+$progress = Term::ProgressBar->new({ count => scalar @InstancesToMove,
                                         name => "Moving instances",
                                         ETA => "linear",
                                         silent => 0});
@@ -807,7 +823,12 @@ $log->msg(2, "<=== Done ! ");
 
 $log->msg(2, "Creating pins in top and bottom instanciations in toplevel.");
 
+$progress = Term::ProgressBar->new({ count => scalar $BotDie_TopMod->ports,
+                                        name => "Toplevel: creating pins in bottom module",
+                                        ETA => "linear",
+                                        silent => 0});
 foreach my $port ($BotDie_TopMod->ports){
+    $progress->update();
     my $portName = $port->name;
     my $portNet = $port->net;
     my $pinselect = new Verilog::Netlist::PinSelection($portNet->name, $portNet->msb, $portNet->lsb);
@@ -825,7 +846,12 @@ foreach my $port ($BotDie_TopMod->ports){
     $nl_toplevel->link();
 }
 
+$progress = Term::ProgressBar->new({ count => scalar $BotDie_TopMod->ports,
+                                        name => "Toplevel: creating pins in top module",
+                                        ETA => "linear",
+                                        silent => 0});
 foreach my $port ($TopDie_TopMod->ports){
+    $progress->update();
     my $portName = $port->name;
     $log->msg(5, "Top die, working on port '$portName'");
     my $portNet = $port->net;
