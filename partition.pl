@@ -534,12 +534,17 @@ foreach my $inst (@InstancesToMove)
                     #=======================================
                     # CASE 2
                     # Net is a wire, meaning no corresponding port on toplevel netlist.
-                    my $foundNet=$TopModule->find_net($netNameOnly);
+                    # Maybe we should find the net name '$netcompletename' instead of '$netNameOnly'
+                    my $foundNet=$TopModule->find_net($netcompletename);
+                    if (!defined $foundNet) {
+                        $foundNet=$TopModule->find_net($netNameOnly);
+                    }
                     my $isBus=0;
                     my $netIs3D=0;
                    
                     if (defined $foundNet) {
                         my $foundNetName = $foundNet->name;
+                        $netNameOnly = $foundNetName;
                         $log->msg(5, "$indent $indent $indent $indent Net is top-level wire: $foundNetName <-"); 
                         if ( defined $foundNet->msb ) {
                             $isBus=1;
@@ -754,6 +759,16 @@ foreach my $inst (@InstancesToMove)
                             }
                         }
                     }
+                    else {
+                        $log->msg(5, "ERROR: $netNameOnly was not found in the top  module when looking for '$netcompletename', even though it's connecting cells in there, in particular $inst on pin $pinName");
+                        if($netNameOnly =~ m/\d'b\d/) {
+                            $log->msg(5, "Seems like it's a constant though, so I guess it's alright.");
+                        }
+                        else {
+                            exit 1;
+                        }
+                    }
+                        
                 }
             }
         }
