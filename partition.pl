@@ -135,12 +135,12 @@ my %hashNetCell;
 # my $TopModuleName=("l2");
 # my $lefpath=("./$root/allOpenPiton.lef");
 
-# LDPC iN7 2020
-my $root=("ldpc-2020");
-my @VerilogFiles=("./$root/ldpc_routed.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("ldpc");
-my $lefpath=("./$root/iN7.lef");
+# # LDPC iN7 2020
+# my $root=("ldpc-2020");
+# my @VerilogFiles=("./$root/ldpc_routed.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ldpc");
+# my $lefpath=("./$root/iN7.lef");
 
 # # LDPC iN7 2020
 # my $root=("2020_pinFixed");
@@ -149,12 +149,12 @@ my $lefpath=("./$root/iN7.lef");
 # my $TopModuleName=("ldpc");
 # my $lefpath=("./$root/iN7.lef");
 
-# # SPC iN7 2020
-# my $root=("SPC-2020");
-# my @VerilogFiles=("./$root/spc.v");
-# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-# my $TopModuleName=("spc");
-# my $lefpath=("./$root/iN7ALL.lef");
+# SPC iN7 2020
+my $root=("SPC-2020");
+my @VerilogFiles=("./$root/spc.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("spc");
+my $lefpath=("./$root/iN7ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -347,7 +347,8 @@ foreach my $inst (@InstancesToMove)
     $progress->update();
     $log->msg(5, "Searching instance: $inst");
     my $foundInst=$TopModule->find_cell($inst);
-    if (! defined $foundInst) {$log->msg(5, "ERROR: can't find instance $inst <-");}
+    $foundInst=~ s/\\//g; # Remove extra escaping characters
+    if (! defined $foundInst) {$log->msg(5, "ERROR: can't find instance $inst <-"); exit 1;}
     else {
         my $foundInstName = $foundInst->name;
         $log->msg(5, "$indent Found instance: $foundInstName <-");
@@ -661,7 +662,7 @@ foreach my $inst (@InstancesToMove)
                                 } 
                             }
                             
-                            if (($foundNet->msb - $foundNet->lsb) == $cnt) { $busIs3D = 0; }
+                            if (($foundNet->msb - $foundNet->lsb) + 1 == $cnt) { $busIs3D = 0; }
                                 else { $busIs3D = 1; }
 
                             if ($busIs3D == 0)  
@@ -973,7 +974,8 @@ sub isNet3D {
     $log->msg(4, "$indent $indent $indent $indent $indent $indent Net: $netToFind is connected to cells:");
     
     foreach my $cellName (@{$hashNetCell{$netToFind}}) {
-        $cellName=~ s/\s//g;                 
+        $cellName=~ s/\s//g;
+        $cellName=~ s/\\//g; # Remove escaping characters
         my $tmp= quotemeta $cellName;
 
         # Put in the array
