@@ -250,10 +250,6 @@ if (defined $TopModule) {
     } 
 else {$log->msg(2, "Could't find top module $TopModuleName");exit;}
 
-$log->msg(2, "Splitting buses...");
-splitBuses();
-$nl->link();
-
 # Populate hash with net-cell associations
 LinkNetCells();
 
@@ -273,6 +269,9 @@ if (! defined $TopModule) {$log->msg(2, "Could't find top module in bot die: $To
         # $BotDie_TopMod->name='BotDie';
     }
 
+$log->msg(2, "Splitting buses...");
+splitBuses();
+$nl_Bot->link();
 
 my $topdiecell = $TopLevel_TopMod->new_cell(name=>"top_die",
                         netlist=>$nl_toplevel,
@@ -866,7 +865,7 @@ foreach my $port ($BotDie_TopMod->ports){
 }
 $nl_toplevel->link();
 
-$progress = Term::ProgressBar->new({ count => scalar $BotDie_TopMod->ports,
+$progress = Term::ProgressBar->new({ count => scalar $TopDie_TopMod->ports,
                                         name => "Toplevel: creating pins in top module",
                                         ETA => "linear",
                                         silent => 0});
@@ -1121,7 +1120,7 @@ sub LinkNetCells {
 # TODO Change log levels from 1 to something lower.
 sub splitBuses {
     my $isBus = 0;
-    foreach my $net ($TopModule->nets) {
+    foreach my $net ($BotDie_TopMod->nets) {
         # If and MSB is defined for the net, this must be a bus.
         $isBus = 0;
         if (defined $net->msb) {
@@ -1155,7 +1154,7 @@ sub splitBuses {
             my $netDirection = "wire";
             if ($net->net_type ne "wire") {
                 $log->msg(1, "Dang, need to find the direction of the bus");
-                foreach my $port ($TopModule->ports) {
+                foreach my $port ($BotDie_TopMod->ports) {
                     if ($net->name eq $port->name) {
                         if ($port->direction eq "in") {
                             $netDirection = "input";
@@ -1175,22 +1174,22 @@ sub splitBuses {
             for(my $i=0;  $i<=$net->msb; $i++) {
                 my $netName = $net->name.'_wire['.$i.']';
                 $log->msg(1, "Creating a new net called $netName");
-                $TopModule->new_net(width=>1,
+                $BotDie_TopMod->new_net(width=>1,
                                     module=>$net->module,
                                     net_type=>$netDirection,
                                     name=>$netName
                                     );
                 my $rhs = $net->name.'['.$i.']';
-                $TopModule->new_contassign(keyword=>"assign",
+                $BotDie_TopMod->new_contassign(keyword=>"assign",
                                             lhs=>$netName,
                                             rhs=>$rhs,
                                             module=>$TopModule,
-                                            netlist=>$nl
+                                            netlist=>$nl_Bot
                                             );
             }
         }
     }
-    foreach my $cell ($TopModule->cells) {
+    foreach my $cell ($BotDie_TopMod->cells) {
         my $cellname = $cell->name;
         $log->msg(1, "Cell: $cellname");
         foreach my $pin ($cell->pins) {
@@ -1228,12 +1227,12 @@ sub splitBuses {
                     push @pinselectArr, $pinselect;
                     my $newpin = $cell->new_pin(
                                         cell=>$cell,
-                                        module=>$TopModule,
+                                        module=>$BotDie_TopMod,
                                         name=>$pinname,
                                         # nets=>$ft_net, # this should be done through link()
                                         portname=>$pinname,
                                         # port=>$newPort,
-                                        netlist=>$nl,
+                                        netlist=>$nl_Bot,
                                         _pinselects=>\@pinselectArr
                                         );
                     # $TopDie_TopMod->link(); # comment to speedup
@@ -1245,7 +1244,7 @@ sub splitBuses {
 
 
     $log->msg(1, "Sanity check");
-    foreach my $cell ($TopModule->cells) {
+    foreach my $cell ($BotDie_TopMod->cells) {
         my $cellname = $cell->name;
         $log->msg(1, "Cell: $cellname");
         foreach my $pin ($cell->pins) {
@@ -1259,5 +1258,5 @@ sub splitBuses {
             }
         }
     }
-    exit 0;
+    # exit 0;
 }
