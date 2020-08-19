@@ -250,9 +250,6 @@ if (defined $TopModule) {
     } 
 else {$log->msg(2, "Could't find top module $TopModuleName");exit;}
 
-# Populate hash with net-cell associations
-LinkNetCells();
-
 # Create top module in top die 
 my $TopDie_TopMod = CreateNewModule($nl_Top,'TopDie',@fl);
 
@@ -270,8 +267,14 @@ if (! defined $TopModule) {$log->msg(2, "Could't find top module in bot die: $To
     }
 
 $log->msg(2, "Splitting buses...");
-splitBuses();
+my %splitBusesDirection; # TODO This hash is probably useless
+splitBuses($BotDie_TopMod);
 $nl_Bot->link();
+splitBuses($TopModule);
+$nl->link();
+
+# Populate hash with net-cell associations
+LinkNetCells();
 
 my $topdiecell = $TopLevel_TopMod->new_cell(name=>"top_die",
                         netlist=>$nl_toplevel,
@@ -398,6 +401,25 @@ foreach my $inst (@InstancesToMove)
                     # We look for the name only 
                     # => Feedthrough, but not a 3D net.
                     my $foundPort=$TopModule->find_port($netNameOnly);
+                    my $newportname = $netNameOnly.'_ft_toplevel';
+                    # Is this net from a split bus?
+                    my $isBusSplit = 0;
+                    # If it was not found, it might be because the net has had its name changed when splitting the buses at the begining.
+                    # As the ports share the same name with those buses, the net we are looking for might still actually be connected to a port, but not sharing the same name anymore.
+                    if (!defined $foundPort) {
+                        my $netNameOnlyUnsplit = $netNameOnly;
+                        # Remove the leading '\' first.
+                        $netNameOnlyUnsplit =~ s/\\//;
+                        # Then remove the appended '_wire'. The brackets [] have been removed in $netNameOnly.
+                        $netNameOnlyUnsplit =~ s/_wire $//;
+                        # Finaly, look again.
+                        $log->msg(5, "Did not find port '$netNameOnly', looking for '$netNameOnlyUnsplit'");
+                        $foundPort=$TopModule->find_port($netNameOnlyUnsplit);
+                        $newportname = $netcompletename;
+                        $newportname =~ s/ $//;
+                        $newportname = $newportname.'_ft_toplevel ';
+                        $isBusSplit = 1;
+                    }
                     if (defined $foundPort) 
                     {
                         my $foundPortName = $foundPort->name;
@@ -413,13 +435,20 @@ foreach my $inst (@InstancesToMove)
                             # if not add port the Top die with same direction as in src netlist
                             my $direction = $foundPort->direction;
                             my $foundPortDirection = $foundPort->direction;
+                            my $lsb = $foundPort->net->lsb;
+                            my $msb = $foundPort->net->msb;
+                            my $ftNetDataType = $foundPort->net->data_type;
+                            # Unset the datatype if it's a bus split. This removes the [xx:yy] statement between 'wire' and its name.
+                            if ($isBusSplit) {
+                                $ftNetDataType = "";
+                            }
                             # Create a feedthrough net
-                            my $newportname = $foundPort->name."_ft_toplevel";
+                            # my $newportname = $foundPort->name."_ft_toplevel";
                             $ft_net = $TopLevel_TopMod->new_net(array=>$foundPort->net->array,
-                                                            data_type=>$foundPort->net->data_type,
+                                                            data_type=>$ftNetDataType,
                                                             module=>$TopLevel_TopMod,
-                                                            lsb=>$foundPort->net->lsb,
-                                                            msb=>$foundPort->net->msb,
+                                                            # lsb=>$lsb, # I don't want to have buses passed fed through at the moment. If I have problems later, this might be a place where to look. Omiting the lsb=> and msb=> lines removes the [xx:yy] statement from the net connected to a pin in a module.
+                                                            # msb=>$msb,
                                                             name=>$newportname,
                                                             net_type=>"wire", # ft net on toplevel is just a wire
                                                             value=>$foundPort->net->value,
@@ -473,12 +502,13 @@ foreach my $inst (@InstancesToMove)
                             }
                            
                             # Feedthrough port, other direction
-                            my $otherDiePortName=$foundPort->name."_ft_toplevel";
+                            # my $otherDiePortName=$foundPort->name."_ft_toplevel";
+                            my $otherDiePortName=$newportname;
                             my $botnetft = $BotDie_TopMod->new_net(array=>$ft_net->array,
                                                             data_type=>$ft_net->data_type,
                                                             module=>$BotDie_TopMod,
-                                                            lsb=>$ft_net->lsb,
-                                                            msb=>$ft_net->msb,
+                                                            # lsb=>$lsb,
+                                                            # msb=>$msb,
                                                             name=>$ft_net->name,
                                                             net_type=>$ftnetdirection,
                                                             value=>$ft_net->value,
@@ -496,34 +526,54 @@ foreach my $inst (@InstancesToMove)
                             my $botnet = $BotDie_TopMod->new_net(array=>$foundPort->net->array,
                                                             data_type=>$foundPort->net->data_type,
                                                             module=>$BotDie_TopMod,
-                                                            lsb=>$foundPort->net->lsb,
-                                                            msb=>$foundPort->net->msb,
+                                                            lsb=>$lsb,
+                                                            msb=>$msb,
                                                             name=>$foundPort->net->name,
                                                             net_type=>$netdirection,
                                                             value=>$foundPort->net->value,
                                                             width=>$foundPort->net->width
                                                             );
-                            $BotDie_TopMod->new_port(
-                                                name=>$foundPort->name,
-                                                direction=>$foundPort->direction,
-                                                data_type=>$foundPort->data_type,
-                                                array=>$foundPort->array,
-                                                module=>$TopDie_TopMod->name,
-                                                net=>$botnet
-                                                );
+                            # The name of the port on the bottom die, incoming the net from the toplevel.
+                            my $regularPortName = $newportname;
+                            $regularPortName =~ s/_ft_toplevel//;
+                            # If not a bus split.
+                            # If the net we are feeding through is from a split bus, we don't need to add a port with its name as the bus will already be there.
+                            if (not($isBusSplit)) {
+                                $BotDie_TopMod->new_port(
+                                                    # name=>$foundPort->name,
+                                                    name=>$regularPortName,
+                                                    direction=>$foundPort->direction,
+                                                    data_type=>$foundPort->data_type,
+                                                    array=>$foundPort->array,
+                                                    module=>$TopDie_TopMod->name,
+                                                    net=>$botnet
+                                                    );
+                            }
                             # $BotDie_TopMod->link(); # Comment to speedup
                             # print STDOUT "mouette ".$tmpport->
                             my $botnetname = $botnet->name;
                             $log->msg(5, "$indent $indent $indent $indent $indent Port: $otherDiePortName with dir: $otherDieDirection added to Bot die as a feedthrough, with net named '$botnetname'");
                             $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName with dir: $otherDieDirection added to Bot die");
                             # $nl_Bot->link();
+
+                            # Catch net number in botftnet
+                            # Instead of 
+                            #   assign HADDR = \HADDR_wire[23]_ft_toplevel ;
+                            # I want
+                            #   assign HADDR[23] = \HADDR_wire[23]_ft_toplevel ;
+                            my $botftnetBit = "";
+                            if ($isBusSplit) {
+                                $botftnetBit = $botnetft->name;
+                                $botftnetBit =~ s/.*(\[\d+\]).*/$1/;
+                            }
+                            my $botnetName = $botnet->name.$botftnetBit;
                             # Assign ft = input;
                             if ($direction eq "in") { 
-                                $assignements{$botnetft->name} = $botnet->name;
+                                $assignements{$botnetft->name} = $botnetName;
                             }
                             # Assign output = ft;
                             if ($direction eq "out") {
-                                $assignements{$botnet->name} = $botnetft->name;
+                                $assignements{$botnetName} = $botnetft->name;
                             }
                         }
                         my $foundNet=$TopModule->find_net($netNameOnly);
@@ -538,9 +588,11 @@ foreach my $inst (@InstancesToMove)
                     # CASE 2
                     # Net is a wire, meaning no corresponding port on toplevel netlist.
                     # Maybe we should find the net name '$netcompletename' instead of '$netNameOnly'
-                    my $foundNet=$TopModule->find_net($netcompletename);
+                    # Let's look into BotDie_TopMod instead of TopModule
+                    $log->msg(5, "$indent $indent $indent $indent Looking for $netcompletename or $netNameOnly");
+                    my $foundNet=$BotDie_TopMod->find_net($netcompletename);
                     if (!defined $foundNet) {
-                        $foundNet=$TopModule->find_net($netNameOnly);
+                        $foundNet=$BotDie_TopMod->find_net($netNameOnly);
                     }
                     my $isBus=0;
                     my $netIs3D=0;
@@ -1119,8 +1171,9 @@ sub LinkNetCells {
 # This is to avoid having whole 3D buses when only a few wires in it should be.
 # TODO Change log levels from 1 to something lower.
 sub splitBuses {
+    my $module = shift;
     my $isBus = 0;
-    foreach my $net ($BotDie_TopMod->nets) {
+    foreach my $net ($module->nets) {
         # If and MSB is defined for the net, this must be a bus.
         $isBus = 0;
         if (defined $net->msb) {
@@ -1151,36 +1204,40 @@ sub splitBuses {
             # Need a net_type to prepend to the name. One of wire, input or output.
             # If the bus is connected to a port, it will have a direction, but not registered in the net_type.
             # Otherwise, it's a 'wire'.
-            my $netDirection = "wire";
-            # if ($net->net_type ne "wire") {
-            #     $log->msg(1, "Dang, need to find the direction of the bus");
-            #     foreach my $port ($BotDie_TopMod->ports) {
-            #         if ($net->name eq $port->name) {
-            #             if ($port->direction eq "in") {
-            #                 $netDirection = "input";
-            #             }
-            #             elsif ($port->direction eq "out") {
-            #                 $netDirection = "output";
-            #             }
-            #             else {
-            #                 $log->msg(1, "ERROR: Can't figure out the direction of the port $busName");
-            #             }
-            #         }
+            # The nettype of the split bus will always be a plain wire, the bus itself keeping the direction information.
+            # However, as seen in the main partitioning algorithm, if we need to create a feedthrough, we need to know the direction of the original bus.
+            my $netType = "wire";
+            my $netDirection = "";
+            if ($net->net_type ne "wire") {
+                $log->msg(1, "Dang, need to find the direction of the bus");
+                foreach my $port ($module->ports) {
+                    if ($net->name eq $port->name) {
+                        if ($port->direction eq "in") {
+                            $netDirection = "input";
+                        }
+                        elsif ($port->direction eq "out") {
+                            $netDirection = "output";
+                        }
+                        else {
+                            $log->msg(1, "ERROR: Can't figure out the direction of the port $busName");
+                        }
+                    }
 
-            #     }
-            # }
-            $log->msg(1, "New net_type: $netDirection");
+                }
+            }
+            $log->msg(1, "New direction: $netDirection");
 
             for(my $i=0;  $i<=$net->msb; $i++) {
                 my $netName = '\\'.$net->name.'_wire['.$i.'] ';
+                $splitBusesDirection{$netName} = $netDirection;
                 $log->msg(1, "Creating a new net called $netName");
-                $BotDie_TopMod->new_net(width=>1,
+                $module->new_net(width=>1,
                                     module=>$net->module,
-                                    net_type=>$netDirection,
+                                    net_type=>$netType,
                                     name=>$netName
                                     );
                 my $rhs = $net->name.'['.$i.']';
-                $BotDie_TopMod->new_contassign(keyword=>"assign",
+                $module->new_contassign(keyword=>"assign",
                                             lhs=>$netName,
                                             rhs=>$rhs,
                                             module=>$TopModule,
@@ -1189,7 +1246,7 @@ sub splitBuses {
             }
         }
     }
-    foreach my $cell ($BotDie_TopMod->cells) {
+    foreach my $cell ($module->cells) {
         my $cellname = $cell->name;
         $log->msg(1, "Cell: $cellname");
         foreach my $pin ($cell->pins) {
@@ -1227,7 +1284,7 @@ sub splitBuses {
                     push @pinselectArr, $pinselect;
                     my $newpin = $cell->new_pin(
                                         cell=>$cell,
-                                        module=>$BotDie_TopMod,
+                                        module=>$module,
                                         name=>$pinname,
                                         # nets=>$ft_net, # this should be done through link()
                                         portname=>$pinname,
@@ -1244,7 +1301,7 @@ sub splitBuses {
 
 
     $log->msg(1, "Sanity check");
-    foreach my $cell ($BotDie_TopMod->cells) {
+    foreach my $cell ($module->cells) {
         my $cellname = $cell->name;
         $log->msg(1, "Cell: $cellname");
         foreach my $pin ($cell->pins) {
