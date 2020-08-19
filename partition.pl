@@ -1152,27 +1152,27 @@ sub splitBuses {
             # If the bus is connected to a port, it will have a direction, but not registered in the net_type.
             # Otherwise, it's a 'wire'.
             my $netDirection = "wire";
-            if ($net->net_type ne "wire") {
-                $log->msg(1, "Dang, need to find the direction of the bus");
-                foreach my $port ($BotDie_TopMod->ports) {
-                    if ($net->name eq $port->name) {
-                        if ($port->direction eq "in") {
-                            $netDirection = "input";
-                        }
-                        elsif ($port->direction eq "out") {
-                            $netDirection = "output";
-                        }
-                        else {
-                            $log->msg(1, "ERROR: Can't figure out the direction of the port $busName");
-                        }
-                    }
+            # if ($net->net_type ne "wire") {
+            #     $log->msg(1, "Dang, need to find the direction of the bus");
+            #     foreach my $port ($BotDie_TopMod->ports) {
+            #         if ($net->name eq $port->name) {
+            #             if ($port->direction eq "in") {
+            #                 $netDirection = "input";
+            #             }
+            #             elsif ($port->direction eq "out") {
+            #                 $netDirection = "output";
+            #             }
+            #             else {
+            #                 $log->msg(1, "ERROR: Can't figure out the direction of the port $busName");
+            #             }
+            #         }
 
-                }
-            }
+            #     }
+            # }
             $log->msg(1, "New net_type: $netDirection");
 
             for(my $i=0;  $i<=$net->msb; $i++) {
-                my $netName = $net->name.'_wire['.$i.']';
+                my $netName = '\\'.$net->name.'_wire['.$i.'] ';
                 $log->msg(1, "Creating a new net called $netName");
                 $BotDie_TopMod->new_net(width=>1,
                                     module=>$net->module,
@@ -1222,7 +1222,7 @@ sub splitBuses {
                     else {
                         $lsb = $msb;
                     }
-                    my $pinselect = new Verilog::Netlist::PinSelection($busName.'_wire', $msb, $lsb);
+                    my $pinselect = new Verilog::Netlist::PinSelection('\\'.$busName.'_wire['.$msb.'] ');
                     my @pinselectArr = ();
                     push @pinselectArr, $pinselect;
                     my $newpin = $cell->new_pin(
