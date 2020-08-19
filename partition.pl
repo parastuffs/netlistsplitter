@@ -1183,7 +1183,7 @@ sub splitBuses {
             # The nettype of the split bus will always be a plain wire, the bus itself keeping the direction information.
             my $netType = "wire";
 
-            for(my $i=0;  $i<=$net->msb; $i++) {
+            for(my $i=$net->lsb;  $i<=$net->msb; $i++) {
                 my $netName = '\\'.$net->name.'_wire['.$i.'] ';
                 $log->msg(6, "Creating a new net called $netName");
                 $module->new_net(width=>1,
