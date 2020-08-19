@@ -107,12 +107,12 @@ my %hashNetCell;
 # my $path_to_file = ("./$root/spc.prt");
 # my $TopModuleName=("spc");
 
-# ArmM0
-my $root=("armM0");
-my @VerilogFiles=("./$root/ArmM0.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("ArmM0");
-my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+# # ArmM0
+# my $root=("armM0");
+# my @VerilogFiles=("./$root/ArmM0.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ArmM0");
+# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 # ArmM0 MAXCUT
 # my $root=("armM0_maxcut");
@@ -149,12 +149,12 @@ my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 # my $TopModuleName=("ldpc");
 # my $lefpath=("./$root/iN7.lef");
 
-# # SPC iN7 2020
-# my $root=("SPC-2020");
-# my @VerilogFiles=("./$root/spc.v");
-# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-# my $TopModuleName=("spc");
-# my $lefpath=("./$root/iN7ALL.lef");
+# SPC iN7 2020
+my $root=("SPC-2020");
+my @VerilogFiles=("./$root/spc.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("spc");
+my $lefpath=("./$root/iN7ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -267,7 +267,6 @@ if (! defined $TopModule) {$log->msg(2, "Could't find top module in bot die: $To
     }
 
 $log->msg(2, "Splitting buses...");
-my %splitBusesDirection; # TODO This hash is probably useless
 splitBuses($BotDie_TopMod);
 $nl_Bot->link();
 splitBuses($TopModule);
@@ -1169,7 +1168,6 @@ sub LinkNetCells {
 #=============================================================================================
 # For each bus of width n in the design, create n wires that can be routed individually in 3D.
 # This is to avoid having whole 3D buses when only a few wires in it should be.
-# TODO Change log levels from 1 to something lower.
 sub splitBuses {
     my $module = shift;
     my $isBus = 0;
@@ -1180,101 +1178,49 @@ sub splitBuses {
             $isBus = 1;
         }
         if ($isBus) {
-            my $busName = $net->name;
-            $log->msg(1, "$busName is a bus");
-            my $str = $net->array;
-            $log->msg(1, "array: $str");
-            $str = $net->module->name;
-            $log->msg(1, "module: $str");
-            $str = $net->lsb;
-            $log->msg(1, "lsb: $str");
-            $str = $net->msb;
-            $log->msg(1, "msb: $str");
-            $str = $net->name;
-            $log->msg(1, "name: $str");
-            $str = $net->net_type;
-            $log->msg(1, "net_type: $str");
-            $str = $net->value;
-            $log->msg(1, "value: $str");
-            $str = $net->width;
-            $log->msg(1, "width: $str");
-            $str = $net->data_type;
-            $log->msg(1, "data_type: $str");
 
             # Need a net_type to prepend to the name. One of wire, input or output.
-            # If the bus is connected to a port, it will have a direction, but not registered in the net_type.
-            # Otherwise, it's a 'wire'.
             # The nettype of the split bus will always be a plain wire, the bus itself keeping the direction information.
-            # However, as seen in the main partitioning algorithm, if we need to create a feedthrough, we need to know the direction of the original bus.
             my $netType = "wire";
-            my $netDirection = "";
-            if ($net->net_type ne "wire") {
-                $log->msg(1, "Dang, need to find the direction of the bus");
-                foreach my $port ($module->ports) {
-                    if ($net->name eq $port->name) {
-                        if ($port->direction eq "in") {
-                            $netDirection = "input";
-                        }
-                        elsif ($port->direction eq "out") {
-                            $netDirection = "output";
-                        }
-                        else {
-                            $log->msg(1, "ERROR: Can't figure out the direction of the port $busName");
-                        }
-                    }
-
-                }
-            }
-            $log->msg(1, "New direction: $netDirection");
 
             for(my $i=0;  $i<=$net->msb; $i++) {
                 my $netName = '\\'.$net->name.'_wire['.$i.'] ';
-                $splitBusesDirection{$netName} = $netDirection;
-                $log->msg(1, "Creating a new net called $netName");
+                $log->msg(6, "Creating a new net called $netName");
                 $module->new_net(width=>1,
-                                    module=>$net->module,
-                                    net_type=>$netType,
-                                    name=>$netName
-                                    );
+                                module=>$net->module,
+                                net_type=>$netType,
+                                name=>$netName
+                                );
                 my $rhs = $net->name.'['.$i.']';
                 $module->new_contassign(keyword=>"assign",
-                                            lhs=>$netName,
-                                            rhs=>$rhs,
-                                            module=>$TopModule,
-                                            netlist=>$nl_Bot
-                                            );
+                                        lhs=>$netName,
+                                        rhs=>$rhs,
+                                        module=>$TopModule,
+                                        netlist=>$nl_Bot
+                                        );
             }
         }
     }
     foreach my $cell ($module->cells) {
         my $cellname = $cell->name;
-        $log->msg(1, "Cell: $cellname");
+        $log->msg(6, "Cell: $cellname");
         foreach my $pin ($cell->pins) {
             my $pinname = $pin->name;
-            $log->msg(1, "Pin: $pinname");
-            # # $pin->nets is an array of hashes
-            # for ($pin->nets) {
-            #     my %netHash = %$_;
-            #     my $lsb = $netHash{lsb};
-            #     my $msb = $netHash{msb};
-            #     my $net = $netHash{net};
-            #     my $netname = $net->name;
-            #     $log->msg(1, "$lsb, $msb, $netname");
-            # }
+            $log->msg(6, "Pin: $pinname");
             foreach my $pinselect ($pin->pinselects) {
                 my $pinselectname = $pinselect->netname;
                 # my $lsb = $pinselect->lsb; # Empty, thus useless
                 # my $msb = $pinselect->msb; # Empty, thus useless
-                $log->msg(1, "Pinselect: $pinselectname");
+                $log->msg(6, "Pinselect: $pinselectname");
                 # Get the lsb/msb if this is a bus such as imabus[2:0], where the msb is 2 and the lsb 0
                 if ($pinselectname =~ m/(.*)\[(\d+):?(\d+)?\]$/) {
                     my $busName = $1;
                     my $msb = $2;
                     my $lsb = $3;
-                    $log->msg(1, "Found my bus back! $busName, msb: '$msb', lsb: '$lsb'");
+                    $log->msg(6, "Found my bus back! $busName, msb: '$msb', lsb: '$lsb'");
                     # Bus range, need to do a concatenation
                     if ($lsb ne '') {
-                        $log->msg(1, "This bus has a range, we need to do a concatenation.");
+                        $log->msg(6, "This bus has a range, we need to do a concatenation.");
                     }
                     else {
                         $lsb = $msb;
@@ -1286,34 +1232,13 @@ sub splitBuses {
                                         cell=>$cell,
                                         module=>$module,
                                         name=>$pinname,
-                                        # nets=>$ft_net, # this should be done through link()
                                         portname=>$pinname,
-                                        # port=>$newPort,
                                         netlist=>$nl_Bot,
                                         _pinselects=>\@pinselectArr
                                         );
-                    # $TopDie_TopMod->link(); # comment to speedup
                     my $newpinname = $newpin->name;
                 }
             }
         }
     }
-
-
-    $log->msg(1, "Sanity check");
-    foreach my $cell ($module->cells) {
-        my $cellname = $cell->name;
-        $log->msg(1, "Cell: $cellname");
-        foreach my $pin ($cell->pins) {
-            my $pinname = $pin->name;
-            $log->msg(1, "Pin: $pinname");
-            foreach my $pinselect ($pin->pinselects) {
-                my $pinselectname = $pinselect->netname;
-                my $lsb = $pinselect->lsb; # Empty, thus useless
-                my $msb = $pinselect->msb; # Empty, thus useless
-                $log->msg(1, "Pinselect: $pinselectname, msb: $msb, lsb: $lsb");
-            }
-        }
-    }
-    # exit 0;
 }
