@@ -15,7 +15,7 @@ use Data::Dumper;
 use Term::ProgressBar;
 
 my $log = File::Log->new({
-  debug           => 2,                   # Set the debug level
+  debug           => 5,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -53,6 +53,9 @@ my @fl = (filename=>'partition.pl', lineno=>0);
 
 # Prepare nets-cells hash
 my %hashNetCell;
+
+# hash of 3D nets names.
+my %nets3D;
 
 # Input data: netlist and partition 
 #my @VerilogFiles=("./verilog/tmp.v");
@@ -149,12 +152,33 @@ my %hashNetCell;
 # my $TopModuleName=("ldpc");
 # my $lefpath=("./$root/iN7.lef");
 
-# SPC iN7 2020
-my $root=("SPC-2020");
+# # SPC iN7 2020
+# my $root=("SPC-2020");
+# my @VerilogFiles=("./$root/spc.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("spc");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # SPC iN7 2020 MoL
+# my $root=("SPC-2020_MoL");
+# my @VerilogFiles=("./$root/spc.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("spc");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# SPC iN7 2020 LoL gate-level
+my $root=("SPC-2020_LoL_gate-level");
 my @VerilogFiles=("./$root/spc.v");
 my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
 my $TopModuleName=("spc");
 my $lefpath=("./$root/iN7ALL.lef");
+
+# # SPC iN7 2020 LoL block-level
+# my $root=("SPC-2020_LoL_block-level");
+# my @VerilogFiles=("./$root/spc.v");
+# my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part");
+# my $TopModuleName=("spc");
+# my $lefpath=("./$root/iN7ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -588,10 +612,18 @@ foreach my $inst (@InstancesToMove)
                     # Net is a wire, meaning no corresponding port on toplevel netlist.
                     # Maybe we should find the net name '$netcompletename' instead of '$netNameOnly'
                     # Let's look into BotDie_TopMod instead of TopModule
-                    $log->msg(5, "$indent $indent $indent $indent Looking for $netcompletename or $netNameOnly");
+                    $log->msg(5, "$indent $indent $indent $indent Looking for '$netcompletename' or '$netNameOnly'");
                     my $foundNet=$BotDie_TopMod->find_net($netcompletename);
                     if (!defined $foundNet) {
-                        $foundNet=$BotDie_TopMod->find_net($netNameOnly);
+                        if ($netcompletename =~ /\[(\d+)\]/) {
+                            my $busWire = $1;
+                            $netcompletename = "\\${netNameOnly}_wire[${busWire}] ";
+                            $log->msg(5, "$indent $indent $indent $indent Actually looking for '$netcompletename' now");
+                            $foundNet = $BotDie_TopMod->find_net($netcompletename);
+                        }
+                        if (!defined $foundNet) {
+                            $foundNet=$BotDie_TopMod->find_net($netNameOnly);
+                        }
                     }
                     my $isBus=0;
                     my $netIs3D=0;
@@ -711,7 +743,9 @@ foreach my $inst (@InstancesToMove)
                             my $cnt = 0;
                             my $busIs3D = 0;
                             foreach my $busWire ($foundNet->lsb .. $foundNet->msb) {
-                                my $fullNetName = "$netNameOnly\[$busWire\]";
+                                # my $fullNetName = "$netNameOnly\[$busWire\]";
+                                # Testing an alternative to not skip 3D wires in buses:
+                                my $fullNetName = "\\${netNameOnly}_wire\[$busWire\] ";
                                 
                                 # Check if this wire of the bus is 3D or not
                                 $netIs3D = isNet3D($fullNetName, \@InstancesToMove_clean);
@@ -837,35 +871,56 @@ $progress = Term::ProgressBar->new({ count => scalar $TopDie_TopMod->cells,
 foreach my $cell ($TopDie_TopMod->cells) {
     $progress->update();
     foreach my $pin (values %{$cell->_pins}) {
+        my $dbg_str = 0;
+        if ($pin->name eq "r1_addr") {
+            $dbg_str = 1;
+        }
+        $log->msg(5, "Inside pin cmu_ic_data") if $dbg_str;
         foreach my $pinselect ($pin->pinselects) {
             # If at least one net connected to the pin is of the renamed port, change the pin.
+            my $isConcat = 0;
             my $pinselectnetname = $pinselect->netname;
-            $pinselectnetname =~ s/\[([^\[\]]|(?0))*]//g;
-            if (exists($newports{$pinselectnetname})) {
-                my $newPort = $newports{$pinselectnetname};
+            $log->msg(5, "pinselectnetname = '$pinselectnetname'") if $dbg_str;
+
+            # If this pin is connected to a concatenation
+            if ($pinselectnetname =~ /\{.*\}/) {
+                $pinselectnetname =~ s/(^\{)|(\}$)//g;
+                $isConcat = 1;
+            }
+            my @netnames = split(',',   $pinselectnetname);
+            my @newNetNames = ();
+            if ($isConcat) {
+                $log->msg(5, "This is a concatenation, get to work.") if $dbg_str;
+                foreach my $net (@netnames) {
+                    my $fullBusWireName = $net;
+                    my $newNetName = $net;
+                    if ($net =~ /\[(\d+)\]/) {
+                        my $busWire = $1;
+                        $fullBusWireName =~ s/\[([^\[\]]|(?0))*]//g;
+                        $fullBusWireName = "\\${fullBusWireName}_wire[${busWire}] ";
+                        $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
+                    }
+                    my $newPort = $newports{$net};
+                    if (!defined $newPort) {
+                        $log->msg(5, "Did not find a port with '$net'") if $dbg_str;
+                        $newPort = $newports{$fullBusWireName};
+                    }
+                    if (defined $newPort) {
+                        $log->msg(5, "Found a port with '$fullBusWireName'") if $dbg_str;
+                        my $newNet = $newPort->net;
+                        $newNetName = $newNet->name;
+                    }
+                    push @newNetNames, $newNetName;
+                }
+                # Once we are done scanning the concatenation, merge the update and create a new pin.
                 my $pinname = $pin->name;
-                # print STDOUT "Comparing $pinname and $oldportname\n";
-                # $log->msg(5, "About to delete pin $pinname because it was connected to $oldportname");
-                # Delete the old pin
-                # print STDOUT Dumper($pin);
                 $pin->delete; # If this fails, maybe a link() is missing somewhere.
-                # Create a new pin
-                my $ft_net = $newPort->net;
+                # New name for the concatenation
+                my $newPinselectName = join(",", @newNetNames);
+                $newPinselectName = "\{${newPinselectName}\}";
+                $log->msg(5, "New badass concatenation name: '$newPinselectName'") if $dbg_str;
 
-                # Build the name of the net by extracting the possible bus range.
-                my $msb = $ft_net->msb;
-                my $lsb = $ft_net->lsb;
-                if ($pinselect->netname =~ m/\[(\d+):?([\d]*)\]/){
-                    $msb = $1;
-                    $lsb = $2;
-                    # print STDOUT "It's a bus right there! msb: '$msb', lsb: '$lsb'\n";
-                }
-                if ($lsb eq ""){
-                    $lsb = $msb;
-                }
-
-                my $ftnetname = $ft_net->name;
-                my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $msb, $lsb);
+                my $pinselect = new Verilog::Netlist::PinSelection($newPinselectName);
                 my @pinselectArr = ();
                 push @pinselectArr, $pinselect;
                 my $newpin = $cell->new_pin(
@@ -880,9 +935,65 @@ foreach my $cell ($TopDie_TopMod->cells) {
                                     );
                 # $TopDie_TopMod->link(); # comment to speedup
                 my $newpinname = $newpin->name;
-                $log->msg(5, "New pin name: $newpinname connected to $ftnetname");
-                # Go on with the next pin.
-                last;
+                $log->msg(5, "New pin name: $newpinname connected to $newPinselectName");
+            }
+            # Not a concatenation
+            else {
+                $pinselectnetname =~ s/\[([^\[\]]|(?0))*]//g;
+                my $fullBusWireName = "";
+                if ($pinselect->netname =~ /\[(\d+)\]/) {
+                    my $busWire = $1;
+                    $fullBusWireName = "\\${pinselectnetname}_wire[${busWire}] ";
+                    $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
+                }
+                my $newPort = $newports{$pinselectnetname};
+                if (!defined $newPort) {
+                    $log->msg(5, "Did not find a port with '$pinselectnetname'") if $dbg_str;
+                    $newPort = $newports{$fullBusWireName};
+                    if (defined $newPort) {
+                        $log->msg(5, "Found a port with '$fullBusWireName'") if $dbg_str;
+                        my $pinname = $pin->name;
+                        # print STDOUT "Comparing $pinname and $oldportname\n";
+                        # $log->msg(5, "About to delete pin $pinname because it was connected to $oldportname");
+                        # Delete the old pin
+                        # print STDOUT Dumper($pin);
+                        $pin->delete; # If this fails, maybe a link() is missing somewhere.
+                        # Create a new pin
+                        my $ft_net = $newPort->net;
+
+                        # Build the name of the net by extracting the possible bus range.
+                        my $msb = $ft_net->msb;
+                        my $lsb = $ft_net->lsb;
+                        if ($pinselect->netname =~ m/\[(\d+):?([\d]*)\]/){
+                            $msb = $1;
+                            $lsb = $2;
+                            # print STDOUT "It's a bus right there! msb: '$msb', lsb: '$lsb'\n";
+                        }
+                        if ($lsb eq ""){
+                            $lsb = $msb;
+                        }
+
+                        my $ftnetname = $ft_net->name;
+                        my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $msb, $lsb);
+                        my @pinselectArr = ();
+                        push @pinselectArr, $pinselect;
+                        my $newpin = $cell->new_pin(
+                                            cell=>$cell,
+                                            module=>$TopDie_TopMod,
+                                            name=>$pinname,
+                                            # nets=>$ft_net, # this should be done through link()
+                                            portname=>$pinname,
+                                            # port=>$newPort,
+                                            netlist=>$nl_Top,
+                                            _pinselects=>\@pinselectArr
+                                            );
+                        # $TopDie_TopMod->link(); # comment to speedup
+                        my $newpinname = $newpin->name;
+                        $log->msg(5, "New pin name: $newpinname connected to $ftnetname");
+                        # Go on with the next pin.
+                        last;
+                    }
+                }
             }
         }  
     }
@@ -955,7 +1066,13 @@ $log->msg(2, "Write netlists: ");
 write_nl($nl_Top,"./$root/Top.v");
 write_nl($nl_Bot,"./$root/Bot.v");
 write_nl($nl_toplevel,"./$root/toplevel.v");
-$log->msg(2, "<=== Done ! ");
+$log->msg(2, "<=== Done! ");
+
+my $numberOf3DNets = keys %nets3D;
+$log->msg(2, "Congrats, you now have a 3D design with $numberOf3DNets 3D wires.");
+foreach my $netname (keys %nets3D) {
+    $log->msg(3, "$netname");
+}
 
 ## Dump netlists 
 #my $fh_Top = IO::File->new('./output/Top.dmp', "w") or die "%Error: $! creating Top dump file,";
@@ -1041,6 +1158,9 @@ sub isNet3D {
     my $cellName=""; 
     
     $log->msg(4, "$indent $indent $indent $indent $indent $indent Net: $netToFind is connected to cells:");
+    unless (exists $hashNetCell{$netToFind}) {
+        $log->msg(4, "Net does not exist in hashNetCell!");
+    }
     
     foreach my $cellName (@{$hashNetCell{$netToFind}}) {
         $cellName=~ s/\s//g;
@@ -1090,6 +1210,7 @@ sub isNet3D {
 
     if ($Is3DNet) {
         $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 3D net");
+        $nets3D{$netToFind} = 1;
     }
     else {
         $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 2D net");
@@ -1151,6 +1272,7 @@ sub write_nl {
 #=============================================================================================
 sub LinkNetCells {
     # First add all the nets as keys into the hash
+    # This is probably dumb and useless. We create empty entries with keys that are actually objects. They are probably not used afterward.
     foreach my $net ($TopModule->nets) {
         $hashNetCell{$net} = ();
     }
@@ -1159,16 +1281,34 @@ sub LinkNetCells {
     foreach my $cell ($TopModule->cells) {
         foreach my $pin ($cell->pins) {
             foreach my $pinselect ($pin->pinselects) {
-                push @{$hashNetCell{$pinselect->netname}}, $cell->name;
+                my $netname = $pinselect->netname;
+                # $netname =~ s/\s//g;
+                my $cellname = $cell->name;
+                push @{$hashNetCell{$netname}}, $cell->name;
+                # $log->msg(3, "adding $cellname to $netname");
             }
         }
     }
+
+    # foreach my $net (keys %hashNetCell) {
+    #     $log->msg(3, "=> In net '$net', we have:");
+    #     foreach my $cell (@{$hashNetCell{$net}}) {
+    #         $log->msg(3, "  -> '$cell'");
+    #     }
+    # }
+
 }
 
 #=============================================================================================
 # For each bus of width n in the design, create n wires that can be routed individually in 3D.
 # This is to avoid having whole 3D buses when only a few wires in it should be.
 sub splitBuses {
+# my $progress = Term::ProgressBar->new({ count => scalar @lines,
+#                                     name => "Reading instances to move",
+#                                     ETA => "linear",
+#                                     silent => 0});
+# $progress->update();
+
     my $module = shift;
     my $isBus = 0;
     foreach my $net ($module->nets) {
