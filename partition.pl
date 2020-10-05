@@ -15,7 +15,7 @@ use Data::Dumper;
 use Term::ProgressBar;
 
 my $log = File::Log->new({
-  debug           => 5,                   # Set the debug level
+  debug           => 2,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -166,8 +166,16 @@ my %nets3D;
 # my $TopModuleName=("spc");
 # my $lefpath=("./$root/iN7ALL.lef");
 
+# # SPC iN7 2020 LoL gate-level
+# my $root=("SPC-2020_LoL_gate-level");
+# my @VerilogFiles=("./$root/spc.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("spc");
+# my $lefpath=("./$root/iN7ALL.lef");
+# # my $lefpath=("./$root/iN7ALL.lef");
+
 # SPC iN7 2020 LoL gate-level
-my $root=("SPC-2020_LoL_gate-level");
+my $root=("SPC-2020_metal-clustering_4");
 my @VerilogFiles=("./$root/spc.v");
 my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
 my $TopModuleName=("spc");
@@ -872,7 +880,7 @@ foreach my $cell ($TopDie_TopMod->cells) {
     $progress->update();
     foreach my $pin (values %{$cell->_pins}) {
         my $dbg_str = 0;
-        if ($pin->name eq "r1_addr") {
+        if ($pin->name eq "dout_p0") {
             $dbg_str = 1;
         }
         $log->msg(5, "Inside pin cmu_ic_data") if $dbg_str;
@@ -894,10 +902,21 @@ foreach my $cell ($TopDie_TopMod->cells) {
                 foreach my $net (@netnames) {
                     my $fullBusWireName = $net;
                     my $newNetName = $net;
+                    $log->msg(5, "net name = '$net'") if $dbg_str;
                     if ($net =~ /\[(\d+)\]/) {
                         my $busWire = $1;
                         $fullBusWireName =~ s/\[([^\[\]]|(?0))*]//g;
-                        $fullBusWireName = "\\${fullBusWireName}_wire[${busWire}] ";
+                        $fullBusWireName =~ s/^\\//g;
+                        $fullBusWireName =~ s/ $//g;
+                        $log->msg(5, "stripped fullBusWireName = '$fullBusWireName'") if $dbg_str;
+                        # If this net is actually already a bus wire, don't append the "_wire" part a second time.
+                        if ($fullBusWireName =~ /_wire $/) {
+                            $fullBusWireName = $net;
+                            $log->msg(5, "already a bus wire, back to the original") if $dbg_str;
+                        }
+                        else {
+                            $fullBusWireName = "\\${fullBusWireName}_wire[${busWire}] ";
+                        }
                         $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
                     }
                     my $newPort = $newports{$net};
@@ -910,7 +929,7 @@ foreach my $cell ($TopDie_TopMod->cells) {
                         my $newNet = $newPort->net;
                         $newNetName = $newNet->name;
                     }
-                    push @newNetNames, $newNetName;
+                    push @newNetNames, $fullBusWireName;
                 }
                 # Once we are done scanning the concatenation, merge the update and create a new pin.
                 my $pinname = $pin->name;
