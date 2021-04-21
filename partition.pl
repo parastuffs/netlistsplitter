@@ -15,7 +15,7 @@ use Data::Dumper;
 use Term::ProgressBar;
 
 my $log = File::Log->new({
-  debug           => 2,                   # Set the debug level
+  debug           => 5,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -117,6 +117,13 @@ my %nets3D;
 # my $TopModuleName=("ArmM0");
 # my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
+# # ArmM0 -Test spaces
+# my $root=("armM0_test_spaces");
+# my @VerilogFiles=("./$root/ArmM0.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ArmM0");
+# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+
 # ArmM0 MAXCUT
 # my $root=("armM0_maxcut");
 # my @VerilogFiles=("./$root/ArmM0.v");
@@ -174,12 +181,68 @@ my %nets3D;
 # my $lefpath=("./$root/iN7ALL.lef");
 # # my $lefpath=("./$root/iN7ALL.lef");
 
-# SPC iN7 2020 LoL gate-level
-my $root=("SPC-2020_metal-clustering_4");
-my @VerilogFiles=("./$root/spc.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("spc");
-my $lefpath=("./$root/iN7ALL.lef");
+# # SPC iN7 2020 LoL gate-level
+# my $root=("SPC-2020_metal-clustering_4");
+# my @VerilogFiles=("./$root/spc.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("spc");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 1-ML
+# my $root=("boomcore-2020_1-ML");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 2-ML
+# my $root=("boomcore-2020_2-ML");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 3-ML
+# my $root=("boomcore-2020_3-ML");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 4-ML
+# my $root=("boomcore-2020_4-ML");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 5-ML
+# my $root=("boomcore-2020_5-ML");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 6-ML
+# my $root=("boomcore-2020_6-ML");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 gate-level
+# my $root=("boomcore-2020_gate-level");
+# my @VerilogFiles=("./$root/BoomCore_WithBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("BoomCore");
+# my $lefpath=("./$root/iN7ALL.lef");
+
+# # BoomCore iN7 2020 gate-level, post-place, buffer-less
+# my $root=("MemPool-Group-MoL");
+# my @VerilogFiles=("./$root/group_flat.v");
+# my $path_to_file = ("./$root/Mempool-Group_pure-MoL_metis_01_NoWires_area.hgr.part_striped.txt");
+# my $TopModuleName=("group");
+# my $lefpath=("./$root/iN3_ALL.lef");
 
 # # SPC iN7 2020 LoL block-level
 # my $root=("SPC-2020_LoL_block-level");
@@ -187,6 +250,20 @@ my $lefpath=("./$root/iN7ALL.lef");
 # my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part");
 # my $TopModuleName=("spc");
 # my $lefpath=("./$root/iN7ALL.lef");
+
+# # MemPool Group in3 MoL 
+# my $root=("MemPool-Group-MoL");
+# my @VerilogFiles=("./$root/group_flat.v");
+# my $path_to_file = ("./$root/Mempool-Group_pure-MoL_metis_01_NoWires_area.hgr.part_striped.txt");
+# my $TopModuleName=("group");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# MemPool Group in3 MoL 
+my $root=("MemPool-Group-LoL");
+my @VerilogFiles=("./$root/../MemPool-Group-MoL/group_flat.v");
+my $path_to_file = ("./$root/Mempool-Group_LoL_metis_01_NoWires_area.hgr.part.txt");
+my $TopModuleName=("group");
+my $lefpath=("./$root/iN3_ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -261,7 +338,7 @@ my %InstancesToMove_hash = map { $_ => 1 } @InstancesToMove_clean;
 # Netlist should be flat and in a single file 
 
 $log->msg(2, "===>");
-$log->msg(2, " Reading netlits");
+$log->msg(2, " Reading netlist");
 
 foreach my $file (@VerilogFiles) {
     $nl->read_file (filename=>$file);
@@ -282,11 +359,15 @@ if (defined $TopModule) {
     } 
 else {$log->msg(2, "Could't find top module $TopModuleName");exit;}
 
-# Create top module in top die 
+# Create top module in top die
+$log->msg(2, "Create top module in top die...");
 my $TopDie_TopMod = CreateNewModule($nl_Top,'TopDie',@fl);
 
 # Create top module in toplevel
+$log->msg(2, "Create top module in toplevel...");
 my $TopLevel_TopMod = CreateNewModule($nl_toplevel, 'TopLevel', @fl);
+
+$log->msg(2, "Refresh netlist linkage...");
 $nl_Bot->link();
 
 # Rename the top module in bot die 
@@ -424,7 +505,7 @@ foreach my $inst (@InstancesToMove)
 
                     my $netNameOnly = $netcompletename;
                     # Get rid of brackets if bus (array)
-                    $netNameOnly=~ s/\[([^\[\]]|(?0))*]//g;
+                    $netNameOnly=~ s/\[([^\[\]]|(?0))*]$//g; # Only remove the ending brackets. There might be some *inside* the net name, but those are part of its name and should not be removed.
                     
                     #=======================================
                     # CASE 1
@@ -624,8 +705,11 @@ foreach my $inst (@InstancesToMove)
                     my $foundNet=$BotDie_TopMod->find_net($netcompletename);
                     if (!defined $foundNet) {
                         if ($netcompletename =~ /\[(\d+)\]/) {
-                            my $busWire = $1;
-                            $netcompletename = "\\${netNameOnly}_wire[${busWire}] ";
+                            my $busWire = $+; # Catch the *last* matching result
+                            my $netNameOnlyStripped = $netNameOnly;
+                            $netNameOnlyStripped =~ s/ $//g;# Remove trailing space that would end up in the middle of the final name.
+                            $netNameOnlyStripped =~ s/^\\//g;# Remove heading \ that is added anyway
+                            $netcompletename = "\\${netNameOnlyStripped}_wire[${busWire}] ";
                             $log->msg(5, "$indent $indent $indent $indent Actually looking for '$netcompletename' now");
                             $foundNet = $BotDie_TopMod->find_net($netcompletename);
                         }
@@ -753,7 +837,10 @@ foreach my $inst (@InstancesToMove)
                             foreach my $busWire ($foundNet->lsb .. $foundNet->msb) {
                                 # my $fullNetName = "$netNameOnly\[$busWire\]";
                                 # Testing an alternative to not skip 3D wires in buses:
-                                my $fullNetName = "\\${netNameOnly}_wire\[$busWire\] ";
+                                my $netNameOnlyStripped = $netNameOnly;
+                                $netNameOnlyStripped =~ s/ $//g;
+                                $netNameOnlyStripped =~ s/^\\//g;
+                                my $fullNetName = "\\${netNameOnlyStripped}_wire\[$busWire\] ";
                                 
                                 # Check if this wire of the bus is 3D or not
                                 $netIs3D = isNet3D($fullNetName, \@InstancesToMove_clean);
@@ -915,7 +1002,9 @@ foreach my $cell ($TopDie_TopMod->cells) {
                             $log->msg(5, "already a bus wire, back to the original") if $dbg_str;
                         }
                         else {
-                            $fullBusWireName = "\\${fullBusWireName}_wire[${busWire}] ";
+                            my $netNameOnlyStripped = $fullBusWireName;
+                            $netNameOnlyStripped =~ s/ $//g;
+                            $fullBusWireName = "\\${netNameOnlyStripped}_wire[${busWire}] ";
                         }
                         $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
                     }
@@ -962,7 +1051,10 @@ foreach my $cell ($TopDie_TopMod->cells) {
                 my $fullBusWireName = "";
                 if ($pinselect->netname =~ /\[(\d+)\]/) {
                     my $busWire = $1;
-                    $fullBusWireName = "\\${pinselectnetname}_wire[${busWire}] ";
+                    my $pinselectnetnameStripped = $pinselectnetname;
+                    $pinselectnetnameStripped =~ s/ $//g;
+                    $pinselectnetnameStripped =~ s/^\\//g;
+                    $fullBusWireName = "\\${pinselectnetnameStripped}_wire[${busWire}] ";
                     $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
                 }
                 my $newPort = $newports{$pinselectnetname};
@@ -1322,15 +1414,18 @@ sub LinkNetCells {
 # For each bus of width n in the design, create n wires that can be routed individually in 3D.
 # This is to avoid having whole 3D buses when only a few wires in it should be.
 sub splitBuses {
-# my $progress = Term::ProgressBar->new({ count => scalar @lines,
-#                                     name => "Reading instances to move",
-#                                     ETA => "linear",
-#                                     silent => 0});
-# $progress->update();
 
     my $module = shift;
     my $isBus = 0;
+
+    my $progress = Term::ProgressBar->new({ count => scalar $module->nets,
+                                        name => "Splitting bus",
+                                        ETA => "linear",
+                                        silent => 0});
+
     foreach my $net ($module->nets) {
+        $progress->update();
+
         # If and MSB is defined for the net, this must be a bus.
         $isBus = 0;
         if (defined $net->msb) {
@@ -1343,7 +1438,10 @@ sub splitBuses {
             my $netType = "wire";
 
             for(my $i=$net->lsb;  $i<=$net->msb; $i++) {
-                my $netName = '\\'.$net->name.'_wire['.$i.'] ';
+                my $netNameStripped = $net->name;
+                $netNameStripped =~ s/ $//g;
+                $netNameStripped =~ s/^\\//g;
+                my $netName = '\\'.$netNameStripped.'_wire['.$i.'] ';
                 $log->msg(6, "Creating a new net called $netName");
                 $module->new_net(width=>1,
                                 module=>$net->module,
@@ -1384,7 +1482,10 @@ sub splitBuses {
                     else {
                         $lsb = $msb;
                     }
-                    my $pinselect = new Verilog::Netlist::PinSelection('\\'.$busName.'_wire['.$msb.'] ');
+                    my $busnameStripped = $busName;
+                    $busnameStripped =~ s/ $//g;
+                    $busnameStripped =~ s/^\\//g;
+                    my $pinselect = new Verilog::Netlist::PinSelection('\\'.$busnameStripped.'_wire['.$msb.'] ');
                     my @pinselectArr = ();
                     push @pinselectArr, $pinselect;
                     my $newpin = $cell->new_pin(
