@@ -15,7 +15,7 @@ use Data::Dumper;
 use Term::ProgressBar;
 
 my $log = File::Log->new({
-  debug           => 5,                   # Set the debug level
+  debug           => 2,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -260,8 +260,8 @@ my %nets3D;
 
 # MemPool Group in3 MoL 
 my $root=("MemPool-Group-LoL");
-my @VerilogFiles=("./$root/../MemPool-Group-MoL/group_flat.v");
-my $path_to_file = ("./$root/Mempool-Group_LoL_metis_01_NoWires_area.hgr.part.txt");
+my @VerilogFiles=("./$root/group_noBuffers.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
 my $TopModuleName=("group");
 my $lefpath=("./$root/iN3_ALL.lef");
 
@@ -466,7 +466,7 @@ foreach my $inst (@InstancesToMove)
     $log->msg(5, "Searching instance: $inst");
     my $foundInst=$TopModule->find_cell($inst);
     $foundInst=~ s/\\//g; # Remove extra escaping characters
-    if (! defined $foundInst) {$log->msg(5, "ERROR: can't find instance $inst <-"); exit 1;}
+    if (! defined $foundInst) {$log->msg(1, "ERROR: can't find instance $inst <-"); exit 1;}
     else {
         my $foundInstName = $foundInst->name;
         $log->msg(5, "$indent Found instance: $foundInstName <-");
@@ -943,9 +943,9 @@ foreach my $inst (@InstancesToMove)
                         }
                     }
                     else {
-                        $log->msg(5, "ERROR: $netNameOnly was not found in the top  module when looking for '$netcompletename', even though it's connecting cells in there, in particular $inst on pin $pinName");
+                        $log->msg(1, "ERROR: $netNameOnly was not found in the top  module when looking for '$netcompletename', even though it's connecting cells in there, in particular $inst on pin $pinName");
                         if($netNameOnly =~ m/\d'b\d/) {
-                            $log->msg(5, "Seems like it's a constant though, so I guess it's alright.");
+                            $log->msg(1, "Seems like it's a constant though, so I guess it's alright.");
                         }
                         else {
                             exit 1;
