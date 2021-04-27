@@ -513,7 +513,16 @@ foreach my $inst (@InstancesToMove)
                     # We look for the name only 
                     # => Feedthrough, but not a 3D net.
                     my $foundPort=$TopModule->find_port($netNameOnly);
-                    my $newportname = $netNameOnly.'_ft_toplevel';
+                    my $newportname = undef;
+
+                    # If net name is escaped, i.e. starts with \
+                    if($netNameOnly =~ m/^\\/) {
+                        $netNameOnly =~ s/ $//g;
+                        $newportname = $netNameOnly.'_ft_toplevel ';
+                    }
+                    else {
+                        my $newportname = $netNameOnly.'_ft_toplevel';
+                    }
                     # Is this net from a split bus?
                     my $isBusSplit = 0;
                     # If it was not found, it might be because the net has had its name changed when splitting the buses at the begining.
