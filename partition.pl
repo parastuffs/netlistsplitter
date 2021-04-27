@@ -521,7 +521,7 @@ foreach my $inst (@InstancesToMove)
                         $newportname = $netNameOnly.'_ft_toplevel ';
                     }
                     else {
-                        my $newportname = $netNameOnly.'_ft_toplevel';
+                        $newportname = $netNameOnly.'_ft_toplevel';
                     }
                     # Is this net from a split bus?
                     my $isBusSplit = 0;
