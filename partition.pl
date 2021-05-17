@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-use 5.010;
+# use 5.010;
 use strict;
 use warnings;
 no warnings 'uninitialized';
@@ -15,7 +15,7 @@ use Data::Dumper;
 use Term::ProgressBar;
 
 my $log = File::Log->new({
-  debug           => 2,                   # Set the debug level
+  debug           => 5,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -253,16 +253,30 @@ my %nets3D;
 
 # # MemPool Group in3 MoL 
 # my $root=("MemPool-Group-MoL");
-# my @VerilogFiles=("./$root/group_flat.v");
-# my $path_to_file = ("./$root/Mempool-Group_pure-MoL_metis_01_NoWires_area.hgr.part_striped.txt");
+# my @VerilogFiles=("./$root/group_noBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
 # my $TopModuleName=("group");
 # my $lefpath=("./$root/iN3_ALL.lef");
 
-# MemPool Group in3 MoL 
-my $root=("MemPool-Group-LoL");
-my @VerilogFiles=("./$root/group_noBuffers.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("group");
+# # MemPool Group in3 MoL 
+# my $root=("MemPool-Group-LoL");
+# my @VerilogFiles=("./$root/group_noBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("group");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 MoL 
+# my $root=("MemPool-Tile-MoL");
+# my @VerilogFiles=("./$root/tile_noBuff.v");
+# my $path_to_file = ("./$root/Mempool-Tile_pure-MoL_metis_01_NoWires_area.hgr.part.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# MemPool Tile in3 MoL 
+my $root=("MemPool-Tile-LoL");
+my @VerilogFiles=("./$root/tile_noBuff.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
+my $TopModuleName=("tile");
 my $lefpath=("./$root/iN3_ALL.lef");
 
 ## iN7 
@@ -713,7 +727,7 @@ foreach my $inst (@InstancesToMove)
                     $log->msg(5, "$indent $indent $indent $indent Looking for '$netcompletename' or '$netNameOnly'");
                     my $foundNet=$BotDie_TopMod->find_net($netcompletename);
                     if (!defined $foundNet) {
-                        if ($netcompletename =~ /\[(\d+)\]/) {
+                        if (my @matches = $netcompletename =~ /\[(\d+)\]/g) { # For some reason, the regex must be catched in an array for all matches to be scanned and not just the first one.
                             my $busWire = $+; # Catch the *last* matching result
                             my $netNameOnlyStripped = $netNameOnly;
                             $netNameOnlyStripped =~ s/ $//g;# Remove trailing space that would end up in the middle of the final name.
