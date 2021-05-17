@@ -990,7 +990,7 @@ foreach my $cell ($TopDie_TopMod->cells) {
     $progress->update();
     foreach my $pin (values %{$cell->_pins}) {
         my $dbg_str = 0;
-        if ($pin->name eq "dout_p0") {
+        if ($pin->name eq "be_i") {
             $dbg_str = 1;
         }
         $log->msg(5, "Inside pin cmu_ic_data") if $dbg_str;
@@ -1013,9 +1013,9 @@ foreach my $cell ($TopDie_TopMod->cells) {
                     my $fullBusWireName = $net;
                     my $newNetName = $net;
                     $log->msg(5, "net name = '$net'") if $dbg_str;
-                    if ($net =~ /\[(\d+)\]/) {
-                        my $busWire = $1;
-                        $fullBusWireName =~ s/\[([^\[\]]|(?0))*]//g;
+                    if (my @matches = $net =~ /\[(\d+)\]/g) {
+                        my $busWire = $+;
+                        $fullBusWireName =~ s/\[([^\[\]]|(?0))*]$//g; # Only remove the ending brackets. There might be some *inside* the net name, but those are part of its name and should not be removed.
                         $fullBusWireName =~ s/^\\//g;
                         $fullBusWireName =~ s/ $//g;
                         $log->msg(5, "stripped fullBusWireName = '$fullBusWireName'") if $dbg_str;
