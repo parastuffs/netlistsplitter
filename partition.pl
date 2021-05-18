@@ -990,10 +990,11 @@ foreach my $cell ($TopDie_TopMod->cells) {
     $progress->update();
     foreach my $pin (values %{$cell->_pins}) {
         my $dbg_str = 0;
-        if ($pin->name eq "be_i") {
+        # if ($pin->name eq "be_i") {
+        if ($cell->name eq "i_tile_i_snitch_icache_i_lookup_valid_q_reg") {
             $dbg_str = 1;
         }
-        $log->msg(5, "Inside pin cmu_ic_data") if $dbg_str;
+        $log->msg(5, "Inside cell i_tile_i_snitch_icache_i_lookup_valid_q_reg") if $dbg_str;
         foreach my $pinselect ($pin->pinselects) {
             # If at least one net connected to the pin is of the renamed port, change the pin.
             my $isConcat = 0;
@@ -1127,6 +1128,49 @@ foreach my $cell ($TopDie_TopMod->cells) {
                         # Go on with the next pin.
                         last;
                     }
+                }
+                else {
+                  # A port with the same name as the net exists, this might be a feedthrough.
+                  my $portName = $newPort->name;
+                  $log->msg(5, "Found port named '$portName' for netname '$pinselectnetname'");
+                  if ($portName ne $pinselectnetname) {
+                    # This is indeed a feedthrouhg, replace the net name connected to the pin with the name of the port.
+                    $log->msg(5, "'$pinselectnetname' is a feedthrough previously called '$portName'");
+
+                    my $pinname = $pin->name;
+                    # Delete the old pin
+                    $pin->delete; # If this fails, maybe a link() is missing somewhere.
+                    # Create a new pin
+                    my $ft_net = $newPort->net;
+
+                    # Build the name of the net by extracting the possible bus range.
+                    my $msb = $ft_net->msb;
+                    my $lsb = $ft_net->lsb;
+                    if ($pinselect->netname =~ m/\[(\d+):?([\d]*)\]/){
+                        $msb = $1;
+                        $lsb = $2;
+                    }
+                    if ($lsb eq ""){
+                        $lsb = $msb;
+                    }
+
+                    my $ftnetname = $ft_net->name;
+                    my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $msb, $lsb);
+                    my @pinselectArr = ();
+                    push @pinselectArr, $pinselect;
+                    my $newpin = $cell->new_pin(
+                                        cell=>$cell,
+                                        module=>$TopDie_TopMod,
+                                        name=>$pinname,
+                                        portname=>$pinname,
+                                        netlist=>$nl_Top,
+                                        _pinselects=>\@pinselectArr
+                                        );
+                    my $newpinname = $newpin->name;
+                    $log->msg(5, "New pin name: $newpinname connected to $ftnetname");
+
+
+                  }
                 }
             }
         }  
