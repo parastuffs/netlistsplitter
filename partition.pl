@@ -14,8 +14,25 @@ use File::Log;
 use Data::Dumper;
 use Term::ProgressBar;
 
+
+# DEFAULT: Split fanout in top
+my $SPLIT_BOT = 0;
+foreach my $argIdx (0 .. scalar @ARGV) {
+    if ($ARGV[$argIdx] eq "--help") {
+        print 'Usage: ${0} [OPTION]
+
+  --help            Print this help
+  --split-bot       Split fanout in bottom die
+';
+        exit;
+    }
+    elsif ($ARGV[$argIdx] eq "--split-bot") {
+        $SPLIT_BOT = 1;
+    }
+}
+
 my $log = File::Log->new({
-  debug           => 5,                   # Set the debug level
+  debug           => 3,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -56,6 +73,9 @@ my %hashNetCell;
 
 # hash of 3D nets names.
 my %nets3D;
+
+# hash of feedthrough nets names.
+my %netsFT;
 
 # Input data: netlist and partition 
 #my @VerilogFiles=("./verilog/tmp.v");
@@ -265,19 +285,19 @@ my %nets3D;
 # my $TopModuleName=("group");
 # my $lefpath=("./$root/iN3_ALL.lef");
 
-# # MemPool Tile in3 MoL 
-# my $root=("MemPool-Tile-MoL");
-# my @VerilogFiles=("./$root/tile_noBuff.v");
-# my $path_to_file = ("./$root/Mempool-Tile_pure-MoL_metis_01_NoWires_area.hgr.part.txt");
-# my $TopModuleName=("tile");
-# my $lefpath=("./$root/iN3_ALL.lef");
-
 # MemPool Tile in3 MoL 
-my $root=("MemPool-Tile-LoL");
+my $root=("MemPool-Tile-MoL");
 my @VerilogFiles=("./$root/tile_noBuff.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
 my $TopModuleName=("tile");
 my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 LoL 
+# my $root=("MemPool-Tile-LoL");
+# my @VerilogFiles=("./$root/tile_noBuff.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -606,6 +626,7 @@ foreach my $inst (@InstancesToMove)
                             # $TopDie_TopMod->link(); # Comment to speedup
                             $log->msg(5, "$indent $indent $indent $indent $indent Port: $newportname with dir: $foundPortDirection added to TopDie");
                             push(@ft_in, $foundPort->name);
+                            $netsFT{$foundPort->name} = 1;
 
                             # my $tmpnetname = $newPort->net->name;
                             # print STDOUT "mouette $tmpnetname\n";
@@ -1247,8 +1268,14 @@ write_nl($nl_toplevel,"./$root/toplevel.v");
 $log->msg(2, "<=== Done! ");
 
 my $numberOf3DNets = keys %nets3D;
-$log->msg(2, "Congrats, you now have a 3D design with $numberOf3DNets 3D wires.");
+my $numberOfFT = keys %netsFT;
+$log->msg(2, "Congrats, you now have a 3D design with $numberOf3DNets 3D wires and $numberOfFT feedthroughs.");
+$log->msg(3, "3D nets:");
 foreach my $netname (keys %nets3D) {
+    $log->msg(3, "$netname");
+}
+$log->msg(3, "Feedthroughs:");
+foreach my $netname (keys %netsFT) {
     $log->msg(3, "$netname");
 }
 
