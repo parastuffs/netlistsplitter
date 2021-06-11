@@ -32,7 +32,7 @@ foreach my $argIdx (0 .. scalar @ARGV) {
 }
 
 my $log = File::Log->new({
-  debug           => 3,                   # Set the debug level
+  debug           => 5,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -285,12 +285,12 @@ my %netsFT;
 # my $TopModuleName=("group");
 # my $lefpath=("./$root/iN3_ALL.lef");
 
-# MemPool Tile in3 MoL 
-my $root=("MemPool-Tile-MoL");
-my @VerilogFiles=("./$root/tile_noBuff.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("tile");
-my $lefpath=("./$root/iN3_ALL.lef");
+# # MemPool Tile in3 MoL 
+# my $root=("MemPool-Tile-MoL");
+# my @VerilogFiles=("./$root/tile_noBuff.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
 
 # # MemPool Tile in3 LoL 
 # my $root=("MemPool-Tile-LoL");
@@ -298,6 +298,13 @@ my $lefpath=("./$root/iN3_ALL.lef");
 # my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
 # my $TopModuleName=("tile");
 # my $lefpath=("./$root/iN3_ALL.lef");
+
+# ARMm0 testing fanout on bottom
+my $root=("armM0_fanout-bot");
+my @VerilogFiles=("./$root/ArmM0.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("ArmM0");
+my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -315,6 +322,9 @@ my $lefpath=("./$root/iN3_ALL.lef");
 # my $path_to_file = ("./$root/exu.prt");
 # my $TopModuleName=("exu");
 #------------------------------------------------------------------------
+
+
+my $skippedNets = 0;
 
 #***************************************************************************
 # Parse LEF file 
@@ -787,8 +797,9 @@ foreach my $inst (@InstancesToMove)
                                 
                                 # Check if it has been already added
                                 my $netInTop=$TopDie_TopMod->find_port($netNameOnly); 
-                                if (defined $netInTop) 
-                                    {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Wire already added, skipping: $netNameOnly ");}
+                                if (defined $netInTop) {
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Wire already added, skipping: $netNameOnly ");
+                                }
                                 else
                                 {
                                     my $newNet=$TopDie_TopMod->new_net(name=>$netNameOnly,
@@ -806,8 +817,10 @@ foreach my $inst (@InstancesToMove)
                                    
                                 # Check if this net has been already added
                                 my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
-                                if (defined $portInTop2) 
-                                    {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");}
+                                if (defined $portInTop2) {
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");
+                                    $skippedNets += 1;
+                                }
                                 else
                                 # if not, look in the LEF file to discover the direction
                                 {
@@ -1278,6 +1291,8 @@ $log->msg(3, "Feedthroughs:");
 foreach my $netname (keys %netsFT) {
     $log->msg(3, "$netname");
 }
+
+$log->msg(3, "Skipped 3D nets: $skippedNets.");
 
 ## Dump netlists 
 #my $fh_Top = IO::File->new('./output/Top.dmp', "w") or die "%Error: $! creating Top dump file,";
