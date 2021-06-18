@@ -814,6 +814,7 @@ foreach my $inst (@InstancesToMove)
                             # This is a 3D net
                             {
                                 $log->msg(5, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D ");
+                                pinDirection($foundInst, $pin);
                                    
                                 # Check if this net has been already added
                                 my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
@@ -917,8 +918,9 @@ foreach my $inst (@InstancesToMove)
                                 
                                 # Check if it has been already added
                                 my $netInTop=$TopDie_TopMod->find_port($netNameOnly); 
-                                if (defined $netInTop) 
-                                    {$log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Bus already added, skipping: $netNameOnly ");}
+                                if (defined $netInTop) {
+                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Bus already added, skipping: $netNameOnly ");
+                                }
                                 else
                                 {
                                         my $newNet=$TopDie_TopMod->new_net(name=>$netNameOnly,
@@ -933,6 +935,7 @@ foreach my $inst (@InstancesToMove)
                             # This is a 3D bus
                             {
                                 $log->msg(5, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D bus");
+                                pinDirection($foundInst, $pin);
                                    
                                 # Check if this net has been already added
                                 my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
@@ -1448,6 +1451,18 @@ sub isNet3D {
     #         $log->msg(4, "$indent $indent $indent $indent $indent $indent Is 3D net");
     #     }
     return ($Is3DNet);
+}
+
+sub pinDirection {
+    my $instance = shift;
+    my $pin = shift;
+    my $intsanceName = $instance->name;
+    my $macroTofind = $instance->submodname;
+    my $pinTofind   = $pin->name;
+    my $pindir = $LEF->find_pindir($macroTofind,$pinTofind);
+    # only lower case  
+    my $pindir_lc= lc $pindir;
+    $log->msg(5, "Instance $intsanceName of macro $macroTofind, on pin $pinTofind is of dir $pindir_lc");
 }
 
 #=============================================================================================
