@@ -9,25 +9,25 @@ use Test::More;
 use Verilog::Netlist;
 use lib './lefParser';
 use LEF;
-use strict;use Data::Dumper;
+use Data::Dumper;
 use File::Log;
 use Data::Dumper;
 use Term::ProgressBar;
 
 
 # DEFAULT: Split fanout in top
-my $SPLIT_BOT = 0;
+my $SPLIT_SOURCE = 0;
 foreach my $argIdx (0 .. scalar @ARGV) {
     if ($ARGV[$argIdx] eq "--help") {
         print 'Usage: ${0} [OPTION]
 
   --help            Print this help
-  --split-bot       Split fanout in bottom die
+  --split-source    Split fanout in bottom die
 ';
         exit;
     }
-    elsif ($ARGV[$argIdx] eq "--split-bot") {
-        $SPLIT_BOT = 1;
+    elsif ($ARGV[$argIdx] eq "--split-source") {
+        $SPLIT_SOURCE = 1;
     }
 }
 
@@ -76,6 +76,9 @@ my %nets3D;
 
 # hash of feedthrough nets names.
 my %netsFT;
+
+# hash of 3D nets to split at the source
+my %netsSplitSource; # {net_name => (source_instance, sink_1, sink_2, ..., sink_n)}
 
 # Input data: netlist and partition 
 #my @VerilogFiles=("./verilog/tmp.v");
@@ -814,76 +817,105 @@ foreach my $inst (@InstancesToMove)
                             # This is a 3D net
                             {
                                 $log->msg(5, "$indent $indent $indent $indent $indent $indent Net: $netNameOnly is 3D ");
-                                pinDirection($foundInst, $pin);
-                                   
-                                # Check if this net has been already added
-                                my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
-                                if (defined $portInTop2) {
-                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");
-                                    $skippedNets += 1;
-                                }
-                                else
-                                # if not, look in the LEF file to discover the direction
-                                {
-                                    my $foundInstName = $foundInst->name;
-                                    my $foundInstSubmodname = $foundInst->submodname;
-                                    my $pinName = $pin->name;
-                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Inst. name:  $foundInstName Module name: $foundInstSubmodname Pin: $pinName ");
-                                    my $macroTofind = $foundInst->submodname;
-                                    my $pinTofind   = $pin->name;
-                                    my $pindir = $LEF->find_pindir($macroTofind,$pinTofind);
-                                    # only lower case  
-                                    my $pindir_lc= lc $pindir;
-                                    
-                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Macro: $macroTofind with Pin: $pinTofind Pindir: $pindir_lc  ");
-                                   
-                                   #----------------------------------------------------------------
-                                   # Add ports                                                      |
-                                   #                                                                |
-                                    my $newPort=$TopDie_TopMod->new_port(name=>$netNameOnly,
-                                                        direction=>$pindir_lc,
-                                                        data_type=>$foundNet->data_type,
-                                                        #array=>$foundPort->array,
-                                                        module=>$TopDie_TopMod,
-                                                        net=>$foundNet
-                                                );
-                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D wire port: $netNameOnly added to Top die");
-                                    $TopDie_TopMod->new_net(name=>$netNameOnly,
-                                                    array=>$foundNet->array,
-                                                    data_type=>$foundNet->data_type,
-                                                    module=>$TopDie_TopMod,
-                                                    port=>$newPort
-                                                    );
-                                    # $TopDie_TopMod->link();
 
-                                    $log->msg(5, "Adding $netNameOnly and its new port to the hash newports. (3D net)");
-                                    $newports{$netNameOnly} = $newPort;
-                            
-                                    # ... and to the Bottom die, with opposite direction
-                                    my $otherDieDirection="none";
-                                    if ($pindir_lc eq "input") { $otherDieDirection="output";}
-                                    if ($pindir_lc eq "output") { $otherDieDirection="input";}
-                                    
-                                    my $newPort_Bot=$BotDie_TopMod->new_port(name=>$netNameOnly,
-                                                        direction=>$otherDieDirection,
-                                                        data_type=>$foundNet->data_type,
-                                                        #array=>$foundPort->array,
-                                                        module=>$TopDie_TopMod,
-                                                        net=>$foundNet
-                                                        );
-                                    $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port: $netNameOnly added to Bot die");
-                                    $BotDie_TopMod->new_net(name=>$netNameOnly,
-                                                    array=>$foundNet->array,
-                                                    data_type=>$foundNet->data_type,
-                                                    module=>$BotDie_TopMod,
-                                                    port=>$newPort_Bot
+                                if ($SPLIT_SOURCE) {
+                                    my @netInstances = ();
+                                    if (pinDirection($foundInst, $pin) eq "output") {
+                                        my $instName = $foundInst->name;
+                                        push(@netInstances, $instName);
+                                        $log->msg(5, "$instName is a source, here are its sinks in BOT:");
+                                        foreach my $cellName (@{$hashNetCell{$foundNet->name}}) {
+                                            if(!exists($InstancesToMove_hash{$cellName})) {
+                                                # Skip the one already added
+                                                if ($cellName ne $instName) {
+                                                    $log->msg(5, "$cellName");
+                                                    push(@netInstances, $cellName);
+                                                }
+
+                                            }
+                                            else {
+                                                $log->msg(5, "$cellName is on TOP");
+                                            }
+
+                                        }
+                                        # netsSplitSource is a hash (%), we access its content using $netsSplitSource{$key}.
+                                        # To assign an array to an entry, we need bracket [] around the actual hash reference (@).
+                                        $netsSplitSource{$foundNet->name} = [@netInstances];
+                                    }
+                                }
+
+                                # Split sink, classic implementation
+                                else {
+                                   
+                                    # Check if this net has been already added
+                                    my $portInTop2=$TopDie_TopMod->find_port($netNameOnly); 
+                                    if (defined $portInTop2) {
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port already added, skipping: $netNameOnly ");
+                                        $skippedNets += 1;
+                                    }
+                                    else
+                                    # if not, look in the LEF file to discover the direction
+                                    {
+                                        my $foundInstName = $foundInst->name;
+                                        my $foundInstSubmodname = $foundInst->submodname;
+                                        my $pinName = $pin->name;
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Inst. name:  $foundInstName Module name: $foundInstSubmodname Pin: $pinName ");
+                                        my $macroTofind = $foundInst->submodname;
+                                        my $pinTofind   = $pin->name;
+                                        my $pindir = $LEF->find_pindir($macroTofind,$pinTofind);
+                                        # only lower case  
+                                        my $pindir_lc= lc $pindir;
+                                        
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent $indent Macro: $macroTofind with Pin: $pinTofind Pindir: $pindir_lc  ");
+                                       
+                                       #----------------------------------------------------------------
+                                       # Add ports                                                      |
+                                       #                                                                |
+                                        my $newPort=$TopDie_TopMod->new_port(name=>$netNameOnly,
+                                                            direction=>$pindir_lc,
+                                                            data_type=>$foundNet->data_type,
+                                                            #array=>$foundPort->array,
+                                                            module=>$TopDie_TopMod,
+                                                            net=>$foundNet
                                                     );
-                                    $TopLevel_TopMod->new_net(name=>$netNameOnly,
-                                                            data_type=>"",#wire
-                                                            module=>$TopLevel_TopMod,
-                                                            comment=>"// 3D net"
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D wire port: $netNameOnly added to Top die");
+                                        $TopDie_TopMod->new_net(name=>$netNameOnly,
+                                                        array=>$foundNet->array,
+                                                        data_type=>$foundNet->data_type,
+                                                        module=>$TopDie_TopMod,
+                                                        port=>$newPort
+                                                        );
+                                        # $TopDie_TopMod->link();
+
+                                        $log->msg(5, "Adding $netNameOnly and its new port to the hash newports. (3D net)");
+                                        $newports{$netNameOnly} = $newPort;
+                                
+                                        # ... and to the Bottom die, with opposite direction
+                                        my $otherDieDirection="none";
+                                        if ($pindir_lc eq "input") { $otherDieDirection="output";}
+                                        if ($pindir_lc eq "output") { $otherDieDirection="input";}
+                                        
+                                        my $newPort_Bot=$BotDie_TopMod->new_port(name=>$netNameOnly,
+                                                            direction=>$otherDieDirection,
+                                                            data_type=>$foundNet->data_type,
+                                                            #array=>$foundPort->array,
+                                                            module=>$TopDie_TopMod,
+                                                            net=>$foundNet
                                                             );
-                                    
+                                        $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent Port: $netNameOnly added to Bot die");
+                                        $BotDie_TopMod->new_net(name=>$netNameOnly,
+                                                        array=>$foundNet->array,
+                                                        data_type=>$foundNet->data_type,
+                                                        module=>$BotDie_TopMod,
+                                                        port=>$newPort_Bot
+                                                        );
+                                        $TopLevel_TopMod->new_net(name=>$netNameOnly,
+                                                                data_type=>"",#wire
+                                                                module=>$TopLevel_TopMod,
+                                                                comment=>"// 3D net"
+                                                                );
+                                        
+                                    }
                                 }
                             }
                         }
@@ -1017,6 +1049,48 @@ foreach my $inst (@InstancesToMove)
         }
     }
 }
+ 
+foreach my $net (keys %netsSplitSource) {
+    # log->msg(5, "In net, we have:");
+    print STDOUT "coucou $net\n";
+    $log->msg(5, "$netsSplitSource{$net}[0]");
+    # $#{ $netsSplitSource{$net} } is the size of the array at key $net inside the hash %netsSplitSource
+    for my $i ( 0 .. $#{ $netsSplitSource{$net} } ) {
+        if ($i == 0) {
+            $log->msg(5, "Source: $netsSplitSource{$net}[$i], nothing to do here.");
+        }
+        else {
+            # Create a new net in TOP
+            
+            # ...
+
+            # Assign new net to old net (or the opposite, don't remember)
+            
+            # ...
+
+            # Create output port in TOP with new net
+            
+            # ...
+
+            # Create an input port in BOT with new net
+            
+            # ...
+
+            # Find the sink pin connected to the old net
+            
+            # ...
+
+            # Change its netselection to the new net
+            
+            # ...
+
+            # Create a wire in toplevel with new net
+            print STDOUT "Sink: $netsSplitSource{$net}[$i]\n";
+        }
+    }
+
+}
+
 
 
 $progress = Term::ProgressBar->new({ count => scalar $TopDie_TopMod->cells,
@@ -1453,6 +1527,7 @@ sub isNet3D {
     return ($Is3DNet);
 }
 
+
 sub pinDirection {
     my $instance = shift;
     my $pin = shift;
@@ -1463,6 +1538,7 @@ sub pinDirection {
     # only lower case  
     my $pindir_lc= lc $pindir;
     $log->msg(5, "Instance $intsanceName of macro $macroTofind, on pin $pinTofind is of dir $pindir_lc");
+    return $pindir_lc;
 }
 
 #=============================================================================================
@@ -1508,9 +1584,9 @@ sub write_nl {
 sub LinkNetCells {
     # First add all the nets as keys into the hash
     # This is probably dumb and useless. We create empty entries with keys that are actually objects. They are probably not used afterward.
-    foreach my $net ($TopModule->nets) {
-        $hashNetCell{$net} = ();
-    }
+    # foreach my $net ($TopModule->nets) {
+    #     $hashNetCell{$net} = ();
+    # }
 
     # Then, for each net, find all its cells and add their name into its array.
     foreach my $cell ($TopModule->cells) {
@@ -1525,12 +1601,12 @@ sub LinkNetCells {
         }
     }
 
-    # foreach my $net (keys %hashNetCell) {
-    #     $log->msg(3, "=> In net '$net', we have:");
-    #     foreach my $cell (@{$hashNetCell{$net}}) {
-    #         $log->msg(3, "  -> '$cell'");
-    #     }
-    # }
+    foreach my $net (keys %hashNetCell) {
+        $log->msg(3, "=> In net '$net', we have:");
+        foreach my $cell (@{$hashNetCell{$net}}) {
+            $log->msg(3, "  -> '$cell'");
+        }
+    }
 
 }
 
