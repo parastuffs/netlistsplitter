@@ -1140,12 +1140,36 @@ foreach my $key (keys %netsSplitSource) {
             # Change its netselection to the new net
             foreach my $pin (values %{$botCell->_pins}) {
                 foreach my $pinselect ($pin->pinselects) {
+                    # Get the raw name of the net connected to the pin
                     my $pinselectnetname = $pinselect->netname;
                     print STDOUT "pinselectnetname: $pinselectnetname\n";
-                    # TODO manage concatenations
-                    if ($pinselectnetname eq $net->name) {
+                    my $isConcat = 0;
+                    my $replace = 0;
+                    # Check if the net is a concatenation, i.e. surrounded with {}
+                    if ($pinselectnetname =~ /\{.*\}/) {
+                        $pinselectnetname =~ s/(^\{)|(\}$)//g;
+                        $isConcat = 1;
+                    }
+                    # Split at the ','. If not a concatenation, changes nothing.
+                    my @netnames = split(',',   $pinselectnetname);
+                    my @newNetNames = ();
+                    foreach my $netname (@netnames) {
+                        # If the net has the name of the old one, change it and mark the pin to be replaced.
+                        if ($netname eq $net->name) {
+                            push @newNetNames, $newNetName;
+                            $replace = 1;
+                        }
+                        else {
+                            push @newNetNames, $netname;
+                        }
+                    }
+                    # Rejoin the nets in case of a concatenation.
+                    my $newPinselectName = join(",", @newNetNames);
+                    $newPinselectName = "\{${newPinselectName}\}" if $isConcat;
+                    # If marked for replacement, delete the old pin and create a new one, in that order.
+                    if ($replace) {
                         my @pinselectArr = ();
-                        my $pinselect = new Verilog::Netlist::PinSelection($newNetName);
+                        my $pinselect = new Verilog::Netlist::PinSelection($newPinselectName);
                         push @pinselectArr, $pinselect;
                         my $pinName = $pin->name;
                         $pin->delete;
