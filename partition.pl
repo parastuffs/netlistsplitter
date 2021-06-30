@@ -80,6 +80,9 @@ my %netsFT;
 # hash of 3D nets to split at the source
 my %netsSplitSource; # {net_name => (source_instance, sink_1, sink_2, ..., sink_n)}
 
+# Hash counting feedthrough splits
+my %ftSplit; # {ft_net_name => count}
+
 # Input data: netlist and partition 
 #my @VerilogFiles=("./verilog/tmp.v");
 #my $TopModuleName=("BotDie");
@@ -593,13 +596,29 @@ foreach my $inst (@InstancesToMove)
                         my $foundPortName = $foundPort->name;
                         $log->msg(5, "$indent $indent $indent $indent Is top-level port: $foundPortName <-");
                         my $ft_net;
-                        # If found, check if it has been already added
-                        my $portInTop=$TopDie_TopMod->find_port($foundPortName); 
-                        if (defined $portInTop) 
-                            {
-                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName <- already added, skipping");}
-                            else
-                            {
+                        my $portInTop;
+                        if ($SPLIT_SOURCE) {
+                            my $count = 1;
+                            # Check if this ft has already been treated.
+                            if (exists $ftSplit{$newportname}) {
+                                $count += $ftSplit{$newportname};
+                            }
+                            if ($newportname =~ / $/) {
+                                $newportname =~ s/ $//;
+                                $newportname .= "_split_$count ";
+                            }
+                            else {
+                                $newportname .= "_split_$count";
+                            }
+                        }
+                        else {
+                            # If found, check if it has been already added
+                            $portInTop=$TopDie_TopMod->find_port($foundPortName);
+                        }
+                        if (defined $portInTop) {
+                                $log->msg(5, "$indent $indent $indent $indent $indent Port: $foundPortName <- already added, skipping");
+                        }
+                        else {
                             # if not add port the Top die with same direction as in src netlist
                             my $direction = $foundPort->direction;
                             my $foundPortDirection = $foundPort->direction;
@@ -1197,7 +1216,9 @@ foreach my $key (keys %netsSplitSource) {
     }
 
 }
-
+########################
+# End of 3D nets splits
+########################
 
 
 $progress = Term::ProgressBar->new({ count => scalar $TopDie_TopMod->cells,
