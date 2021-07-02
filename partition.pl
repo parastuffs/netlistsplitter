@@ -78,7 +78,7 @@ my %nets3D;
 my %netsFT;
 
 # hash of 3D nets to split at the source
-my %netsSplitSource; # {net_name => (source_instance, sink_1, sink_2, ..., sink_n)}
+my %netsSplitSource; # {net_name => ["top"|"bottom", source_instance, sink_1, sink_2, ..., sink_n]}
 
 # Hash counting feedthrough splits
 my %ftSplit; # {ft_net_name => count}
@@ -842,28 +842,71 @@ foreach my $inst (@InstancesToMove)
 
                                 if ($SPLIT_SOURCE) {
                                     my @netInstances = ();
+                                    my $sourceDie;
+                                    # Cell being moved is a source on the top die.
                                     if (pinDirection($foundInst, $pin) eq "output") {
+                                        $sourceDie = "top";
+                                    }
+                                    # Cell is a source. We need to 
+                                    # 1) Check if the net has not already been processed into %netsSplitSource
+                                    # 2) Who is the source in the bottom
+                                    else {
+                                        $sourceDie = "bottom";
+                                    }
+
+                                    push(@netInstances, $sourceDie);
+
+                                    # Source in top die, search sinks in bottom
+                                    if ($sourceDie eq "top") {
                                         my $instName = $foundInst->name;
                                         push(@netInstances, $instName);
                                         $log->msg(5, "$instName is a source, here are its sinks in BOT:");
                                         foreach my $cellName (@{$hashNetCell{$foundNet->name}}) {
+                                            # Search *not* instances to move, i.e. search in bottom.
                                             if(!exists($InstancesToMove_hash{$cellName})) {
                                                 # Skip the one already added
                                                 if ($cellName ne $instName) {
                                                     $log->msg(5, "$cellName");
                                                     push(@netInstances, $cellName);
                                                 }
-
                                             }
                                             else {
                                                 $log->msg(5, "$cellName is on TOP");
                                             }
-
                                         }
-                                        # netsSplitSource is a hash (%), we access its content using $netsSplitSource{$key}.
-                                        # To assign an array to an entry, we need bracket [] around the actual hash reference (@).
-                                        $netsSplitSource{$foundNet->name} = [@netInstances];
                                     }
+
+                                    # Source in bottom die, seach sinks in top and source in bottom.
+                                    else {
+                                        if (!exists $netsSplitSource{$foundNet->name}) {
+                                            my $break = 0;
+                                            foreach my $cellName (@{$hashNetCell{$foundNet->name}}) {
+                                                # If the cell is to be moved on top, that's a sink, add it to the list.
+                                                if (exists($InstancesToMove_hash{$cellName})) {
+                                                    push(@netInstances, $cellName);
+                                                }
+                                                # Cell is in bottom, scan its pins to find out if it's the source.
+                                                else {
+                                                    my $candidateSource = $TopModule->find_cell($cellName);
+                                                    foreach my $candPin ($candidateSource->pins) {
+                                                        last if $break;
+                                                        if (pinDirection($candidateSource, $candPin) eq "output") {
+                                                            foreach my $pinselect ($candPin->pinselects) {
+                                                                if (index($pinselect->netname, $netNameOnly) != -1) {
+                                                                    splice(@netInstances, 1, 0, $cellName);
+                                                                    $break = 1;
+                                                                    last; # i.e. break
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                    # netsSplitSource is a hash (%), we access its content using $netsSplitSource{$key}.
+                                    $netsSplitSource{$foundNet->name} = [@netInstances] if (!exists $netsSplitSource{$foundNet->name});
                                 }
 
                                 # Split sink, classic implementation
@@ -1081,16 +1124,35 @@ foreach my $key (keys %netsSplitSource) {
     print STDOUT "coucou $key\n";
     $log->msg(5, "$netsSplitSource{$key}[0]");
     # $#{ $netsSplitSource{$key} } is the size of the array at key $key inside the hash %netsSplitSource
+    my $sinkDie_TopMod;
+    my $sourceDie_TopMod;
+    my $sinkDie_nl;
     for my $i ( 0 .. $#{ $netsSplitSource{$key} } ) {
-        # This is a source
         if ($i == 0) {
+            if ($netsSplitSource{$key}[$i] eq "top") {
+                $sinkDie_TopMod = $BotDie_TopMod;
+                $sourceDie_TopMod = $TopDie_TopMod;
+                $sinkDie_nl = $nl_Bot;
+            }
+            elsif ($netsSplitSource{$key}[$i] eq "bottom") {
+                $sinkDie_TopMod = $TopDie_TopMod;
+                $sourceDie_TopMod = $BotDie_TopMod;
+                $sinkDie_nl = $nl_Top;
+            }
+            else {
+                $log->msg(1, "ERROR, unknown source cell origin: '$netsSplitSource{$key}[$i]'. Exiting.");
+                exit;
+            }
+        }
+        # This is a source
+        elsif ($i == 1) {
             $log->msg(5, "Source: $netsSplitSource{$key}[$i], nothing to do here.");
         }
         # This is a sink
         else {
             $log->msg(5, "Sink: $netsSplitSource{$key}[$i]");
             # Get net object reference from its name.
-            # The net still lies in the *bottom* die module, as it was not create in the topdie module.
+            # The net still lies in the *bottom* die module, as it was not created in the topdie module.
             my $net = $BotDie_TopMod->find_net($key);
 
             # Create new net name
@@ -1103,64 +1165,64 @@ foreach my $key (keys %netsSplitSource) {
                 $newNetName .= "_split${i}";
             }
 
-            # Create a new net in TOP
-            my $newNetTop = $TopDie_TopMod->new_net(
+            # Create a new net on source die
+            my $newNetSourceDie = $sourceDie_TopMod->new_net(
                             name=>$newNetName,
                             array=>$net->array,
                             data_type=>$net->data_type,
-                            module=>$TopDie_TopMod,
+                            module=>$sourceDie_TopMod,
                             net_type=>"output",
                             comment=>"// Split net");
 
-            # Create output port in TOP with new net
-            my $newPortTop = $TopDie_TopMod->new_port(
+            # Create output port on source die with new net
+            $sourceDie_TopMod->new_port(
                             name=>$newNetName,
                             direction=>"output",
                             data_type=>$net->data_type,
-                            module=>$TopDie_TopMod,
-                            net=>$newNetTop);
+                            module=>$sourceDie_TopMod,
+                            net=>$newNetSourceDie);
 
             # Assign new net to old net (or the opposite, don't remember)
-            $TopDie_TopMod->new_contassign(
+            $sourceDie_TopMod->new_contassign(
                             keyword=>"assign",
                             lhs=>$newNetName,# New
                             rhs=>$net->name, # Old
-                            module=>$TopDie_TopMod
+                            module=>$sourceDie_TopMod
                             );
 
-            # Create an input port in BOT with new net
-            my $newNetBot = $BotDie_TopMod->new_net(
+            # Create an input port on sink die with new net
+            my $newNetSinkDie = $sinkDie_TopMod->new_net(
                             name=>$newNetName,
                             array=>$net->array,
                             data_type=>$net->data_type,
-                            module=>$BotDie_TopMod,
+                            module=>$sinkDie_TopMod,
                             net_type=>"input",# Need to specify the type as the port is not created yet.
                             comment=>"// Split net");
-            my $newPortBot = $BotDie_TopMod->new_port(
+            $sinkDie_TopMod->new_port(
                             name=>$newNetName,
                             direction=>"input",
                             data_type=>$net->data_type,
-                            module=>$BotDie_TopMod,
+                            module=>$sinkDie_TopMod,
                             # Ref to the new net. Actually matters, as it's the net referenced when instanciating the module instance. In fact, it should have the same name as the toplevel connecting wire.
-                            net=>$newNetBot);
+                            net=>$newNetSinkDie);
             
 
             # Find the sink pin connected to the old net
-            my $botCell = $BotDie_TopMod->find_cell($netsSplitSource{$key}[$i]);
-            if (defined $botCell) {
-                print STDOUT "Found sink cell on the bottom: $botCell\n";
+            my $sinkCell = $sinkDie_TopMod->find_cell($netsSplitSource{$key}[$i]);
+            if (defined $sinkCell) {
+                print STDOUT "Found sink cell on the bottom: $sinkCell\n";
             }
             else {
                 print STDOUT "Did not find the sink cell on the bottom, there might be a problem.\n";
             }
-            # foreach my $c ($BotDie_TopMod->cells) {
+            # foreach my $c ($sinkDie_TopMod->cells) {
             #     my $cellname = $c->name;
             #     print STDOUT "'$cellname'\n";
             # }
             
 
             # Change its netselection to the new net
-            foreach my $pin (values %{$botCell->_pins}) {
+            foreach my $pin (values %{$sinkCell->_pins}) {
                 foreach my $pinselect ($pin->pinselects) {
                     # Get the raw name of the net connected to the pin
                     my $pinselectnetname = $pinselect->netname;
@@ -1195,12 +1257,12 @@ foreach my $key (keys %netsSplitSource) {
                         push @pinselectArr, $pinselect;
                         my $pinName = $pin->name;
                         $pin->delete;
-                        $botCell->new_pin(
-                                    cell=>$botCell,
-                                    module=>$BotDie_TopMod,
+                        $sinkCell->new_pin(
+                                    cell=>$sinkCell,
+                                    module=>$sinkDie_TopMod,
                                     name=>$pinName,
                                     portname=>$pinName,
-                                    netlist=>$nl_Bot,
+                                    netlist=>$sinkDie_nl,
                                     _pinselects=>\@pinselectArr
                                     );
                     }
