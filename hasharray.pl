@@ -8,15 +8,14 @@ my %hash = ();
 my $key = "mykey";
 my $value = "quick";
 
-# Square brackets to tell it's an array.
-$hash{$key} = [$value];
+# Push new var at the end of the array,
+# again dereferencing the array.
+push(@{ $hash{$key} }, $value);
 
 print_hash();
 
 $value = "brown";
 
-# Push new var at the end of the array,
-# again dereferencing the array.
 push(@{ $hash{$key} }, $value);
 
 print_hash();
