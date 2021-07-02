@@ -603,6 +603,9 @@ foreach my $inst (@InstancesToMove)
                             if (exists $ftSplit{$newportname}) {
                                 $count += $ftSplit{$newportname};
                             }
+                            else {
+                                $ftSplit{$newportname} = 1;
+                            }
                             if ($newportname =~ / $/) {
                                 $newportname =~ s/ $//;
                                 $newportname .= "_split_$count ";
@@ -665,7 +668,7 @@ foreach my $inst (@InstancesToMove)
 
                             $log->msg(5, "Adding $foundPortName and its new port to the hash newports.");
 
-                            $newports{$foundPortName} = $newPort;
+                            push(@{ $newports{$foundPortName} }, $newPort);
 
                             
                             # ... and to the Bottom die, we need to add 2 pins
@@ -907,7 +910,7 @@ foreach my $inst (@InstancesToMove)
                                         # $TopDie_TopMod->link();
 
                                         $log->msg(5, "Adding $netNameOnly and its new port to the hash newports. (3D net)");
-                                        $newports{$netNameOnly} = $newPort;
+                                        push(@{ $newports{$netNameOnly} }, $newPort);
                                 
                                         # ... and to the Bottom die, with opposite direction
                                         my $otherDieDirection="none";
@@ -1018,7 +1021,7 @@ foreach my $inst (@InstancesToMove)
                                                     );
                                     # $TopDie_TopMod->link();
                                     $log->msg(5, "Adding $netNameOnly and its new port to the hash newports. (3D bus)");
-                                    $newports{$netNameOnly} = $newPort;
+                                    push(@{ $newports{$netNameOnly} }, $newPort);
                                 
                                     $log->msg(5, "$indent $indent $indent $indent $indent $indent $indent 3D bus port: $netNameOnly added to Top die");
 
@@ -1271,10 +1274,12 @@ foreach my $cell ($TopDie_TopMod->cells) {
                         }
                         $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
                     }
-                    my $newPort = $newports{$net};
+                    # my $newPort = $newports{$net};
+                    my $newPort = shift(@{ $newports{$net} });
                     if (!defined $newPort) {
                         $log->msg(5, "Did not find a port with '$net'") if $dbg_str;
-                        $newPort = $newports{$fullBusWireName};
+                        # $newPort = $newports{$fullBusWireName};
+                        $newPort = shift(@{ $newports{$fullBusWireName} });
                     }
                     if (defined $newPort) {
                         $log->msg(5, "Found a port with '$fullBusWireName'") if $dbg_str;
@@ -1320,10 +1325,12 @@ foreach my $cell ($TopDie_TopMod->cells) {
                     $fullBusWireName = "\\${pinselectnetnameStripped}_wire[${busWire}] ";
                     $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
                 }
-                my $newPort = $newports{$pinselectnetname};
+                # my $newPort = $newports{$pinselectnetname};
+                my $newPort = shift(@{ $newports{$pinselectnetname} });
                 if (!defined $newPort) {
                     $log->msg(5, "Did not find a port with '$pinselectnetname'") if $dbg_str;
-                    $newPort = $newports{$fullBusWireName};
+                    # $newPort = $newports{$fullBusWireName};
+                    $newPort = shift(@{ $newports{$fullBusWireName} });
                     if (defined $newPort) {
                         $log->msg(5, "Found a port with '$fullBusWireName'") if $dbg_str;
                         my $pinname = $pin->name;
