@@ -613,6 +613,7 @@ foreach my $inst (@InstancesToMove)
                             else {
                                 $newportname .= "_split_$count";
                             }
+                            $log->msg(5, "Prepared a new port called '$newportname'");
                         }
                         else {
                             # If found, check if it has been already added
@@ -729,7 +730,8 @@ foreach my $inst (@InstancesToMove)
                             $regularPortName =~ s/_ft_toplevel//;
                             # If not a bus split.
                             # If the net we are feeding through is from a split bus, we don't need to add a port with its name as the bus will already be there.
-                            if (not($isBusSplit)) {
+                            # If $SPLIT_SOURCE, we don't want to add a port named 'port_split_x', which is what happens by removing '_ft_toplevel'.
+                            if (not($isBusSplit) and not($SPLIT_SOURCE)) {
                                 $BotDie_TopMod->new_port(
                                                     # name=>$foundPort->name,
                                                     name=>$regularPortName,
@@ -1164,6 +1166,7 @@ foreach my $key (keys %netsSplitSource) {
             else {
                 $newNetName .= "_split${i}";
             }
+            $log->msg(5, "Creating split net '$newNetName'");
 
             # Create a new net on source die
             my $newNetSourceDie = $sourceDie_TopMod->new_net(
