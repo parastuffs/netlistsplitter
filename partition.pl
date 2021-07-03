@@ -305,12 +305,19 @@ my %ftSplit; # {ft_net_name => count}
 # my $TopModuleName=("tile");
 # my $lefpath=("./$root/iN3_ALL.lef");
 
-# ARMm0 testing fanout on bottom
-my $root=("armM0_fanout-bot");
-my @VerilogFiles=("./$root/ArmM0.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("ArmM0");
-my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+# MemPool Tile in3 LoL 
+my $root=("MemPool-Tile-LoL-splitsource");
+my @VerilogFiles=("./$root/tile_noBuff.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
+my $TopModuleName=("tile");
+my $lefpath=("./$root/iN3_ALL.lef");
+
+# # ARMm0 testing fanout on bottom
+# my $root=("armM0_fanout-bot");
+# my @VerilogFiles=("./$root/ArmM0.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ArmM0");
+# my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -861,11 +868,13 @@ foreach my $inst (@InstancesToMove)
                                     # Source in top die, search sinks in bottom
                                     if ($sourceDie eq "top") {
                                         my $instName = $foundInst->name;
+                                        $instName =~ s/^\\//;
+                                        $instName =~ s/\s$//;
                                         push(@netInstances, $instName);
                                         $log->msg(5, "$instName is a source, here are its sinks in BOT:");
                                         foreach my $cellName (@{$hashNetCell{$foundNet->name}}) {
                                             # Search *not* instances to move, i.e. search in bottom.
-                                            if(!exists($InstancesToMove_hash{$cellName})) {
+                                            if(!exists($InstancesToMove_hash{quotemeta $cellName})) {
                                                 # Skip the one already added
                                                 if ($cellName ne $instName) {
                                                     $log->msg(5, "$cellName");
@@ -894,6 +903,7 @@ foreach my $inst (@InstancesToMove)
                                                         last if $break;
                                                         if (pinDirection($candidateSource, $candPin) eq "output") {
                                                             foreach my $pinselect ($candPin->pinselects) {
+                                                                # WARNING this 'index' method to look for a substring might cause a problem if we wrongly recognize a net called 'abc' in some other actually called 'abcd'.
                                                                 if (index($pinselect->netname, $netNameOnly) != -1) {
                                                                     splice(@netInstances, 1, 0, $cellName);
                                                                     $break = 1;
