@@ -32,7 +32,7 @@ foreach my $argIdx (0 .. scalar @ARGV) {
 }
 
 my $log = File::Log->new({
-  debug           => 5,                   # Set the debug level
+  debug           => 2,                   # Set the debug level
   logFileName     => 'splitterlog.log',   # define the log filename
   logFileMode     => '>',                 # '>>' Append or '>' overwrite
   dateTimeStamp   => 1,                   # Timestamp log data entries
@@ -305,12 +305,110 @@ my %ftSplit; # {ft_net_name => count}
 # my $TopModuleName=("tile");
 # my $lefpath=("./$root/iN3_ALL.lef");
 
-# MemPool Tile in3 LoL 
-my $root=("MemPool-Tile-LoL-splitsource");
-my @VerilogFiles=("./$root/tile_noBuff.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
-my $TopModuleName=("tile");
-my $lefpath=("./$root/iN3_ALL.lef");
+# # MemPool Tile in3 LoL 2021-12
+# my $root=("MemPool-Tile-LoL_2021-12");
+# my @VerilogFiles=("./$root/tile_noBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 MoL 2021-12
+# my $root=("MemPool-Tile-MoL_2021-12");
+# my @VerilogFiles=("./$root/tile_noBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 LoL 
+# my $root=("MemPool-Tile-LoL-splitsource");
+# my @VerilogFiles=("./$root/tile_noBuff.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part_escaped");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Group in3 LoL 2021-10
+# my $root=("Mempool_Group_flat_LoL");
+# my @VerilogFiles=("./$root/group_NoBuff.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("group");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 Random post-synthesis 2022-02
+# my $root=("MemPool-Tile-random-post-synthesis");
+# my @VerilogFiles=("./$root/tile_flat.v");
+# my $path_to_file = ("./$root/tile_flat_random_part.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 post-synthesis 2022-02, 1 core on top manually
+# my $root=("MemPool-Tile-post-synthesis-1-core-on-top");
+# my @VerilogFiles=("./$root/tile_flat.v");
+# my $path_to_file = ("./$root/Mempool_Tile_random_post-synth_1-core-on-top.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 post-synthesis 2022-02, 2 core on top manually
+# my $root=("MemPool-Tile-post-synthesis-2-core-on-top");
+# my @VerilogFiles=("./$root/tile_flat.v");
+# my $path_to_file = ("./$root/Mempool_Tile_random_post-synth_2-core-on-top.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 post-synthesis 2022-02, 4 core on top manually
+# my $root=("MemPool-Tile-post-synthesis-4-core-on-top");
+# my @VerilogFiles=("./$root/tile_flat.v");
+# my $path_to_file = ("./$root/Mempool_Tile_random_post-synth_4-core-on-top.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 post-synthesis 2022-02, LoL with instructions from post-place buffer-less
+# my $root=("MemPool-Tile-post-synthesis-LoL");
+# my @VerilogFiles=("./$root/tile_flat.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 post-place with buffer tree 2022-02, LoL mincut wires
+# my $root=("MemPool-Tile-post-place-bt_LoL");
+# my @VerilogFiles=("./$root/tile_withBuffers.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
+# # MemPool Tile in3 post-place no legalisation
+# my $root=("MemPool-Tile-LoL_post-FP/");
+# my @VerilogFiles=("./$root/tile_postFPPlace.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place no legalisation, without FE_* instances
+# my $root=("MemPool-Tile-LoL_post-FP_noFE_post-STA");
+# my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr_post-STA.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place
+# my $root=("MemPool-Tile-LoL_pp");
+# my @VerilogFiles=("./$root/tile_postPlace.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place, without FE_* instances
+# my $root=("MemPool-Tile-LoL_pp_noFE");
+# my @VerilogFiles=("./$root/tile_postPlace_delInstFE.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place no legalisation, without FE_* instances, MOL
+# my $root=("MemPool-Tile-MoL_post-FP_noFE");
+# my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
 
 # # ARMm0 testing fanout on bottom
 # my $root=("armM0_fanout-bot");
@@ -318,6 +416,13 @@ my $lefpath=("./$root/iN3_ALL.lef");
 # my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
 # my $TopModuleName=("ArmM0");
 # my $lefpath=("./$root/gsclib045_lvt_macro.lef");
+
+# CCX in3, without FE_* instances, onetoone clustering, mincut on the wires
+my $root=("ccx-in3_noFE__onetoone-clusters_mincut-wires");
+my @VerilogFiles=("./$root/cc_noFE.v");
+my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+my $TopModuleName=("ccx");
+my $lefpath=("./$root/in3_all.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -418,7 +523,7 @@ else {$log->msg(2, "Could't find top module $TopModuleName");exit;}
 
 # Create top module in top die
 $log->msg(2, "Create top module in top die...");
-my $TopDie_TopMod = CreateNewModule($nl_Top,'TopDie',@fl);
+my $TopDie_TopMod = CreateNewModule($nl_Top,'topDie',@fl);
 
 # Create top module in toplevel
 $log->msg(2, "Create top module in toplevel...");
@@ -445,12 +550,12 @@ $nl->link();
 # Populate hash with net-cell associations
 LinkNetCells();
 
-my $topdiecell = $TopLevel_TopMod->new_cell(name=>"top_die",
+my $topdiecell = $TopLevel_TopMod->new_cell(name=>"topDiei",
                         netlist=>$nl_toplevel,
                         submod=>$TopDie_TopMod,
                         submodname=>$TopDie_TopMod->name);
 
-my $botdiecell = $TopLevel_TopMod->new_cell(name=>"bot_die",
+my $botdiecell = $TopLevel_TopMod->new_cell(name=>"botDiei",
                         netlist=>$nl_toplevel,
                         submod=>$BotDie_TopMod,
                         submodname=>$BotDie_TopMod->name);
@@ -523,7 +628,7 @@ foreach my $inst (@InstancesToMove)
     $log->msg(5, "Searching instance: $inst");
     my $foundInst=$TopModule->find_cell($inst);
     $foundInst=~ s/\\//g; # Remove extra escaping characters
-    if (! defined $foundInst) {$log->msg(1, "ERROR: can't find instance $inst <-"); exit 1;}
+    if (! defined $foundInst) {$log->msg(1, "ERROR: can't find instance $inst <-");}
     else {
         my $foundInstName = $foundInst->name;
         $log->msg(5, "$indent Found instance: $foundInstName <-");
@@ -562,7 +667,7 @@ foreach my $inst (@InstancesToMove)
 
                     my $netNameOnly = $netcompletename;
                     # Get rid of brackets if bus (array)
-                    $netNameOnly=~ s/\[([^\[\]]|(?0))*]$//g; # Only remove the ending brackets. There might be some *inside* the net name, but those are part of its name and should not be removed.
+                    $netNameOnly=~ s/\[([^\[\]]|(?0))*] ?$//g; # Only remove the ending brackets. There might be some *inside* the net name, but those are part of its name and should not be removed.
                     
                     #=======================================
                     # CASE 1
@@ -589,7 +694,7 @@ foreach my $inst (@InstancesToMove)
                         # Remove the leading '\' first.
                         $netNameOnlyUnsplit =~ s/\\//;
                         # Then remove the appended '_wire'. The brackets [] have been removed in $netNameOnly.
-                        $netNameOnlyUnsplit =~ s/_wire $//;
+                        $netNameOnlyUnsplit =~ s/_wire ?$//;
                         # Finaly, look again.
                         $log->msg(5, "Did not find port '$netNameOnly', looking for '$netNameOnlyUnsplit'");
                         $foundPort=$TopModule->find_port($netNameOnlyUnsplit);
@@ -1562,14 +1667,14 @@ foreach my $lhs (keys %assignements) {
 # Write netlists
 $log->msg(2, "===> ");
 $log->msg(2, "Write netlists: ");
-write_nl($nl_Top,"./$root/Top.v");
-write_nl($nl_Bot,"./$root/Bot.v");
+write_nl($nl_Top,"./$root/topDie.v");
+write_nl($nl_Bot,"./$root/botDie.v");
 write_nl($nl_toplevel,"./$root/toplevel.v");
 $log->msg(2, "<=== Done! ");
 
 my $numberOf3DNets = keys %nets3D;
 my $numberOfFT = keys %netsFT;
-$log->msg(2, "Congrats, you now have a 3D design with $numberOf3DNets 3D wires and $numberOfFT feedthroughs.");
+$log->msg(2, "Congrats, you now have a 3D design with $numberOf3DNets 3D wires and $numberOfFT feedthroughs.");# Note that if the feedthroughs are busses, this does not account for each wire being routed as a feedthrough.
 $log->msg(3, "3D nets:");
 foreach my $netname (keys %nets3D) {
     $log->msg(3, "$netname");
