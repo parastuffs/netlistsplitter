@@ -333,6 +333,13 @@ my %ftSplit; # {ft_net_name => count}
 # my $TopModuleName=("group");
 # my $lefpath=("./$root/iN3_ALL.lef");
 
+# # MemPool Group in3 LoL postplace, no legalisation, no FE*, no clustering, 1/sum(len wire)
+# my $root=("MemPool-Group-pp-nolegal-noFE-LoL");
+# my @VerilogFiles=("./$root/group_simplePlaceNoFE.v");
+# my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part_escaped_no-outlier");
+# my $TopModuleName=("group");
+# my $lefpath=("./$root/iN3_ALL.lef");
+
 # # MemPool Tile in3 Random post-synthesis 2022-02
 # my $root=("MemPool-Tile-random-post-synthesis");
 # my @VerilogFiles=("./$root/tile_flat.v");
@@ -382,10 +389,38 @@ my %ftSplit; # {ft_net_name => count}
 # my $TopModuleName=("tile");
 # my $lefpath=("./$root/in3_all.lef");
 
-# # MemPool Tile in3 post-place no legalisation, without FE_* instances
+# # MemPool Tile in3 post-place no legalisation, without FE_* instances, post-STA
 # my $root=("MemPool-Tile-LoL_post-FP_noFE_post-STA");
 # my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
 # my $path_to_file = ("./$root/metis_01_NoWires_area.hgr_post-STA.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# MemPool Tile in3 post-place no legalisation, without FE_* instances, KMeans-geometric 1000 clusters, Mincut with 1/totWL
+my $root=("MemPool-Tile-LoL_KMeans-1000_Mincut-1-over-TotWL_post-FP_noFE");
+my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
+my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part");
+my $TopModuleName=("tile");
+my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place no legalisation, without FE_* instances, KMeans-geometric 1000 clusters, Mincut with 1/totWL, post-STA rectification
+# my $root=("MemPool-Tile-LoL_KMeans-1000_Mincut-1-over-TotWL_post-FP_noFE_post-STA");
+# my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
+# my $path_to_file = ("./$root/metis_03_TotLength_area.hgr_post-STA.txt");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place no legalisation, without FE_* instances, KMeans-geometric 1000 clusters, max with WL (circut)
+# my $root=("MemPool-Tile-LoL_KMeans-1000_Maxcut-TotWL_post-FP_noFE");
+# my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
+# my $path_to_file = ("./$root/circut_03_TotLength_area.hgr.part");
+# my $TopModuleName=("tile");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # MemPool Tile in3 post-place no legalisation, without FE_* instances, KMeans-geometric 100 clusters, max with WL (circut)
+# my $root=("MemPool-Tile-LoL_KMeans-100_Maxcut-TotWL_post-FP_noFE");
+# my @VerilogFiles=("./$root/tile_postFPPlace_delInstFE.v");
+# my $path_to_file = ("./$root/circut_03_TotLength_area.hgr.part");
 # my $TopModuleName=("tile");
 # my $lefpath=("./$root/in3_all.lef");
 
@@ -417,12 +452,33 @@ my %ftSplit; # {ft_net_name => count}
 # my $TopModuleName=("ArmM0");
 # my $lefpath=("./$root/gsclib045_lvt_macro.lef");
 
-# CCX in3, without FE_* instances, onetoone clustering, mincut on the wires
-my $root=("ccx-in3_noFE__onetoone-clusters_mincut-wires");
-my @VerilogFiles=("./$root/cc_noFE.v");
-my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
-my $TopModuleName=("ccx");
-my $lefpath=("./$root/in3_all.lef");
+# # CCX in3, without FE_* instances, onetoone clustering, mincut on the wires
+# my $root=("ccx-in3_noFE__onetoone-clusters_mincut-wires");
+# my @VerilogFiles=("./$root/cc_noFE.v");
+# my $path_to_file = ("./$root/metis_01_NoWires_area.hgr.part");
+# my $TopModuleName=("ccx");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # CCX in3, without FE_* instances, Kmeans-geometric clustering, 2000 clusters, mincut on 1/totlen
+# my $root=("ccx-in3_noFE_kmeans-geom_2000_mincut_1-totlen");
+# my @VerilogFiles=("./$root/cc_noFE.v");
+# my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part");
+# my $TopModuleName=("ccx");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # CCX in3, without FE_* instances, Progressive (recurssive) clustering, 2048 clusters, mincut on 1/totlen
+# my $root=("ccx-in3_noFE_progressive_2048_mincut_1-totlen");
+# my @VerilogFiles=("./$root/cc_noFE.v");
+# my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part");
+# my $TopModuleName=("ccx");
+# my $lefpath=("./$root/in3_all.lef");
+
+# # CCX in3, without FE_* instances, Progressive-wirelength clustering, up to 50*AGW, mincut on 1/totlen
+# my $root=("ccx-in3_noFE_progressive-WL_50_mincut_1-totlen");
+# my @VerilogFiles=("./$root/cc_noFE.v");
+# my $path_to_file = ("./$root/metis_04_1-TotLength_area.hgr.part");
+# my $TopModuleName=("ccx");
+# my $lefpath=("./$root/in3_all.lef");
 
 ## iN7 
 #my $root=("spc_iN7");
@@ -503,9 +559,12 @@ $log->msg(2, "===>");
 $log->msg(2, " Reading netlist");
 
 foreach my $file (@VerilogFiles) {
+    $log->msg(3, "Base netlist");
     $nl->read_file (filename=>$file);
+    $log->msg(3, "Bottom netlist");
     $nl_Bot->read_file (filename=>$file);
 }
+$log->msg(3, "Linking base netlist");
 $nl->link();            # Read in any sub-modules
 #$nl->lint();           # Optional, see docs; probably not wanted
 $nl->exit_if_error();
@@ -622,6 +681,7 @@ $progress = Term::ProgressBar->new({ count => scalar @InstancesToMove,
 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 my %newports;
+my %ftTop; # hash of feedthroughs in top: {old net name => new ft name}, this will be useful for later pinselect name replacement.
 foreach my $inst (@InstancesToMove) 
 {
     $progress->update();
@@ -745,6 +805,8 @@ foreach my $inst (@InstancesToMove)
                             if ($isBusSplit) {
                                 $ftNetDataType = "";
                             }
+                            $ftTop{$netNameOnly} = $newportname;
+                            $log->msg(5, "$indent $indent $indent $indent $indent Adding ftnet $newportname to hash with key $netNameOnly");
                             # Create a feedthrough net
                             # my $newportname = $foundPort->name."_ft_toplevel";
                             $ft_net = $TopLevel_TopMod->new_net(array=>$foundPort->net->array,
@@ -1413,10 +1475,10 @@ foreach my $cell ($TopDie_TopMod->cells) {
     foreach my $pin (values %{$cell->_pins}) {
         my $dbg_str = 0;
         # if ($pin->name eq "be_i") {
-        if ($cell->name eq "i_tile_i_snitch_icache_i_lookup_valid_q_reg") {
+        if ($cell->name eq "\\pcx_pcx_arbr8_ard_i_dff_req_a_d0_0_q_reg[7] ") {
             $dbg_str = 1;
         }
-        $log->msg(5, "Inside cell i_tile_i_snitch_icache_i_lookup_valid_q_reg") if $dbg_str;
+        $log->msg(5, "Inside cell \\pcx_pcx_arbr8_ard_i_dff_req_a_d0_0_q_reg[7] ") if $dbg_str;
         foreach my $pinselect ($pin->pinselects) {
             # If at least one net connected to the pin is of the renamed port, change the pin.
             my $isConcat = 0;
@@ -1497,11 +1559,13 @@ foreach my $cell ($TopDie_TopMod->cells) {
             else {
                 $pinselectnetname =~ s/\[([^\[\]]|(?0))*]//g;
                 my $fullBusWireName = "";
+                my $busWire = "";
                 if ($pinselect->netname =~ /\[(\d+)\]/) {
-                    my $busWire = $1;
+                    $busWire = $1;
                     my $pinselectnetnameStripped = $pinselectnetname;
                     $pinselectnetnameStripped =~ s/ $//g;
                     $pinselectnetnameStripped =~ s/^\\//g;
+                    $pinselectnetnameStripped =~ s/_wire//g;
                     $fullBusWireName = "\\${pinselectnetnameStripped}_wire[${busWire}] ";
                     $log->msg(5, "fullBusWireName = '$fullBusWireName'") if $dbg_str;
                 }
@@ -1511,6 +1575,15 @@ foreach my $cell ($TopDie_TopMod->cells) {
                     $log->msg(5, "Did not find a port with '$pinselectnetname'") if $dbg_str;
                     # $newPort = $newports{$fullBusWireName};
                     $newPort = shift(@{ $newports{$fullBusWireName} });
+                    if(!defined $newPort) {
+                        $log->msg(5, "Did not find a port with '$fullBusWireName'") if $dbg_str;
+                        $fullBusWireName = $pinselectnetname;
+                        $fullBusWireName =~ s/ $//g;
+                        $fullBusWireName =~ s/^\\//g;
+                        $fullBusWireName =~ s/_wire//g;
+                        $log->msg(5, "Now trying to find a port with '$fullBusWireName'") if $dbg_str;
+                        $newPort = shift(@{ $newports{$fullBusWireName} });
+                    }
                     if (defined $newPort) {
                         $log->msg(5, "Found a port with '$fullBusWireName'") if $dbg_str;
                         my $pinname = $pin->name;
@@ -1535,7 +1608,12 @@ foreach my $cell ($TopDie_TopMod->cells) {
                         }
 
                         my $ftnetname = $ft_net->name;
-                        my $pinselect = new Verilog::Netlist::PinSelection($ft_net->name, $msb, $lsb);
+                        if ($ftnetname =~ /(_wire\[\d+\])/) {
+                            my $find = $1;
+                            my $replace = "_wire\[".$busWire."\]";
+                            $ftnetname =~ s/\Q$find/$replace/g;
+                        }
+                        my $pinselect = new Verilog::Netlist::PinSelection($ftnetname);
                         my @pinselectArr = ();
                         push @pinselectArr, $pinselect;
                         my $newpin = $cell->new_pin(
